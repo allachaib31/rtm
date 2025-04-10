@@ -5,7 +5,7 @@ const EventEmitter = require('events');
 class Database extends EventEmitter {
     constructor() {
         super();
-        this.connectMongoDB();
+        //this.connectMongoDB();
         this.connectMSSQL();
     }
 
