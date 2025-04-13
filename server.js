@@ -76,17 +76,17 @@ class Server {
             legacyHeaders: false,
         }));
         //this.app.set('dist', path.join(__dirname, 'dist'));
-        this.app.use(express.static(path.join(__dirname, 'dist')));
+        //this.app.use(express.static(path.join(__dirname, 'dist')));
 
 
     }
 
     routes() {
         this.app.use('/api/v1.0/', require('./routes/rtmRoute'));
-        const indexPath = path.resolve(__dirname, 'dist', 'index.html');
+        /*const indexPath = path.resolve(__dirname, 'dist', 'index.html');
         this.app.get('/', (req, res) => {
             res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-        });
+        });*/
         
     }
 

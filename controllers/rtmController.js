@@ -81,21 +81,21 @@ class RtmController {
                 `;
             } else if (typeOfData == "Livraison") {
                 query = `
-                SELECT 
+          SELECT 
     l.id,
     l.fkCommande,
     l.fkEtablissement AS fkEtablissement,
     ca.code_camion AS fkCamion,
-    -- Client Information
+
+    -- Client Info
     cl.id_client AS fkClient,
     cl.Nom AS clientName,
-
     com.nomCommune,
     wil.nomWiaya,
 
     l.date,
     l.heur,
-    l.total,--TOTAL TTC
+    l.total,
     l.totalAchat,
     v.montant,
     l.fkStatutLivraison,
@@ -103,53 +103,46 @@ class RtmController {
     l.statusConfirmation,
     l.dateProgrammer,
     l.fkVisite,
-    co.totalPoid as Poid,
-      -- Rotation
+    co.totalPoid AS Poid,
+
+    -- Rotation
     rlc.numero AS rotationNumero,
-        -- Join with Sous_famille and Famille
-    sf.nom AS nomSousFamille,
-    f.Nom_famille AS nomFamille,
-    dc.fk_produit,
+
+    -- Product Info from DetailLivraison
+    dl.fk_produit,
     p.nom_produit,
     tc.type_client AS typePrix,
-    dc.prix_unitaire,
-    dc.quantite,
-    dc.prix_unitaire * dc.quantite AS CA,
+    dl.prix_unitaire,
+    dl.quantite,
+    dl.prix_unitaire * dl.quantite AS CA,
     p.prixReference,
     l.remise, 
-    l.remiseProduit / NULLIF(COUNT(dc.fk_produit) OVER (PARTITION BY l.fkCommande), 0) AS remiseProduit,
-    dc.valeurRemise,
-    dc.prix_changer,
-    p.prixReference AS prixAchat,
-    p.clissage
+    l.remiseProduit,
+    dl.valeurRemise,
+    dl.prix_changer,
+    dl.prixAchat,
+    dl.prix_chargementCommercial,
+    p.clissage,
 
+    -- Family Info
+    sf.nom AS nomSousFamille,
+    f.Nom_famille AS nomFamille
 
 FROM 
     [TrizDistributionMekahli].[dbo].[Livraison] l
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].client cl ON l.fk_client = cl.id_client
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].camion ca ON l.fk_camion = ca.id_camion
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].Commande co ON l.fkCommande = co.id
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].DetailCommande dc ON l.fkCommande = dc.fk_commande
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].produit p ON dc.fk_produit = p.id_produit  -- Get product name and details using fk_produit
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].Sous_famille sf ON p.fk_Sousfamille = sf.id_sousfamille
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].famille f ON sf.fk_famille = f.id_famille
-LEFT JOIN
-    [TrizDistributionMekahli].[dbo].RotationLivraisonCamion rlc ON l.fkRotationLivraisonCamion = rlc.id
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].[Commune] com ON cl.fkCommune = com.codeCommune
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].[Wilaya] wil ON com.fkWilaya = wil.codeWilaya
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].[type_client] tc ON cl.fk_type_client = tc.id_type
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].[versement] v ON l.fk_versement = v.id_versement
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON l.fk_client = cl.id_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca ON l.fk_camion = ca.id_camion
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Commande] co ON l.fkCommande = co.id
+LEFT JOIN [TrizDistributionMekahli].[dbo].[DetailLivraison] dl ON l.id = dl.fk_livraison
+LEFT JOIN [TrizDistributionMekahli].[dbo].[produit] p ON dl.fk_produit = p.id_produit
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Sous_famille] sf ON p.fk_Sousfamille = sf.id_sousfamille
+LEFT JOIN [TrizDistributionMekahli].[dbo].[famille] f ON sf.fk_famille = f.id_famille
+LEFT JOIN [TrizDistributionMekahli].[dbo].[RotationLivraisonCamion] rlc ON l.fkRotationLivraisonCamion = rlc.id
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Commune] com ON cl.fkCommune = com.codeCommune
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Wilaya] wil ON com.fkWilaya = wil.codeWilaya
+LEFT JOIN [TrizDistributionMekahli].[dbo].[type_client] tc ON cl.fk_type_client = tc.id_type
+LEFT JOIN [TrizDistributionMekahli].[dbo].[versement] v ON l.fk_versement = v.id_versement
 WHERE 
     l.fkEtablissement = '${etablissementId}'
     AND l.date BETWEEN '${startDate}' AND '${endDate}'
@@ -180,6 +173,60 @@ WHERE
     c.fkEtablissement = '${etablissementId}'
     AND Tc.useStock = 'true';
     `
+            } else if (typeOfData == "RecapVendeur"){
+                query = `
+                    DECLARE @weekday INT;
+SET DATEFIRST 7; -- الأحد = 1
+SET @weekday = DATEPART(WEEKDAY, '${startDate}');
+
+-- تحويل weekday إلى fk_journee كما في جدول journee
+DECLARE @jour INT = 
+    CASE @weekday
+        WHEN 7 THEN 1  -- Samedi
+        WHEN 1 THEN 2  -- Dimanche
+        WHEN 2 THEN 3  -- Lundi
+        WHEN 3 THEN 4  -- Mardi
+        WHEN 4 THEN 5  -- Mercredi
+        WHEN 5 THEN 6  -- Jeudi
+        WHEN 6 THEN 7  -- Vendredi
+    END;
+
+;WITH ProgrammedClients AS (
+    SELECT
+        fk_secteur,
+        COUNT(DISTINCT fk_client) AS ClientsProgrammer
+    FROM [TrizDistributionMekahli].[dbo].[secteur_client]
+    GROUP BY fk_secteur
+)
+SELECT
+    v.date AS [Date],
+    s.Nom_secteur AS [Name],
+    v.fk_camion,
+    pc.ClientsProgrammer AS [Clients Programmer],
+    COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Visiter Programmer],
+    COUNT(DISTINCT CASE WHEN sc.fk_client IS NULL THEN v.fk_client END) AS [Clients Visiter Non Programmer],
+    pc.ClientsProgrammer - COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Non Visiter]
+FROM [TrizDistributionMekahli].[dbo].[Vente] v
+    INNER JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON v.fk_camion = csa.fk_camion
+    -- نربط مع الجدول اللي فيه fk_journee
+    INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs ON cs.fk_camion = csa.fk_camion AND cs.fk_secteur = csa.fk_secteur
+    INNER JOIN [TrizDistributionMekahli].[dbo].[secteur] s ON csa.fk_secteur = s.id_secteur
+    LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc ON s.id_secteur = sc.fk_secteur AND v.fk_client = sc.fk_client
+    INNER JOIN ProgrammedClients pc ON s.id_secteur = pc.fk_secteur
+WHERE
+    v.date = '${startDate}' 
+    AND v.fkEtablissement = '${etablissementId}'
+    -- الفلترة حسب اليوم الحقيقي للتاريخ
+    AND cs.fk_journee = @jour
+GROUP BY
+    v.date,
+    v.fk_camion,
+    s.Nom_secteur,
+    pc.ClientsProgrammer
+ORDER BY
+    v.date, s.Nom_secteur;
+
+                `
             }
 
             const result = await Database.executeSQLQuery(query);
