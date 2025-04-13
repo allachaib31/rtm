@@ -117,7 +117,7 @@ class RtmController {
     dc.prix_unitaire * dc.quantite AS CA,
     p.prixReference,
     l.remise, 
-    l.remiseProduit,
+    l.remiseProduit / NULLIF(COUNT(dc.fk_produit) OVER (PARTITION BY l.fkCommande), 0) AS remiseProduit,
     dc.valeurRemise,
     dc.prix_changer,
     p.prixReference AS prixAchat,
