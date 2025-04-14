@@ -175,21 +175,7 @@ WHERE
     `
             } else if (typeOfData == "RecapVendeur"){
                 query = `
-                    DECLARE @weekday INT;
-SET DATEFIRST 7; -- الأحد = 1
-SET @weekday = DATEPART(WEEKDAY, '${startDate}');
-
--- تحويل weekday إلى fk_journee كما في جدول journee
-DECLARE @jour INT = 
-    CASE @weekday
-        WHEN 7 THEN 1  -- Samedi
-        WHEN 1 THEN 2  -- Dimanche
-        WHEN 2 THEN 3  -- Lundi
-        WHEN 3 THEN 4  -- Mardi
-        WHEN 4 THEN 5  -- Mercredi
-        WHEN 5 THEN 6  -- Jeudi
-        WHEN 6 THEN 7  -- Vendredi
-    END;
+   SET DATEFIRST 7; -- الأحد = 1
 
 ;WITH ProgrammedClients AS (
     SELECT
@@ -200,34 +186,55 @@ DECLARE @jour INT =
 )
 SELECT
     v.date AS [Date],
+    DATENAME(WEEKDAY, v.date) AS [DayName],
     s.Nom_secteur AS [Name],
     v.fk_camion,
     cam.code_camion AS [Camion Name],
     pc.ClientsProgrammer AS [Clients Programmer],
     COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Visiter Programmer],
     COUNT(DISTINCT CASE WHEN sc.fk_client IS NULL THEN v.fk_client END) AS [Clients Visiter Non Programmer],
-    pc.ClientsProgrammer - COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Non Visiter]
+    pc.ClientsProgrammer - COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Non Visiter],
+    MIN(v.heur) AS [FirstHeurVente],
+    MAX(v.heur) AS [LastHeurVente],
+    SUM(v.total) AS [Total Vente]  -- 👈 هذا السطر الجديد لحساب مجموع total لكل يوم ولكل camion
 FROM [TrizDistributionMekahli].[dbo].[Vente] v
+    -- 👇 نحسب journee المقابل لتاريخ كل vente
+    CROSS APPLY (
+        SELECT 
+            jour = 
+                CASE DATEPART(WEEKDAY, v.date)
+                    WHEN 7 THEN 1  -- Samedi
+                    WHEN 1 THEN 2  -- Dimanche
+                    WHEN 2 THEN 3  -- Lundi
+                    WHEN 3 THEN 4  -- Mardi
+                    WHEN 4 THEN 5  -- Mercredi
+                    WHEN 5 THEN 6  -- Jeudi
+                    WHEN 6 THEN 7  -- Vendredi
+                END
+    ) AS j
     INNER JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON v.fk_camion = csa.fk_camion
-    -- نربط مع الجدول اللي فيه fk_journee
-    INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs ON cs.fk_camion = csa.fk_camion AND cs.fk_secteur = csa.fk_secteur
-    INNER JOIN [TrizDistributionMekahli].[dbo].[camion] cam ON cam.id_camion = v.fk_camion -- 👈 الربط مع جدول camion
+    INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs 
+        ON cs.fk_camion = csa.fk_camion 
+        AND cs.fk_secteur = csa.fk_secteur 
+        AND cs.fk_journee = j.jour
+    INNER JOIN [TrizDistributionMekahli].[dbo].[camion] cam ON cam.id_camion = v.fk_camion
     INNER JOIN [TrizDistributionMekahli].[dbo].[secteur] s ON csa.fk_secteur = s.id_secteur
-    LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc ON s.id_secteur = sc.fk_secteur AND v.fk_client = sc.fk_client
+    LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
+        ON s.id_secteur = sc.fk_secteur AND v.fk_client = sc.fk_client
     INNER JOIN ProgrammedClients pc ON s.id_secteur = pc.fk_secteur
 WHERE
-    v.date = '${startDate}' 
+    v.date BETWEEN '${startDate}' AND '${endDate}'
     AND v.fkEtablissement = '${etablissementId}'
-    -- الفلترة حسب اليوم الحقيقي للتاريخ
-    AND cs.fk_journee = @jour
 GROUP BY
     v.date,
+    DATENAME(WEEKDAY, v.date),
     v.fk_camion,
     cam.code_camion,
     s.Nom_secteur,
     pc.ClientsProgrammer
 ORDER BY
     v.date, s.Nom_secteur;
+
 
                 `
             }
