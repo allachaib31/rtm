@@ -202,6 +202,7 @@ SELECT
     v.date AS [Date],
     s.Nom_secteur AS [Name],
     v.fk_camion,
+    cam.code_camion AS [Camion Name],
     pc.ClientsProgrammer AS [Clients Programmer],
     COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Visiter Programmer],
     COUNT(DISTINCT CASE WHEN sc.fk_client IS NULL THEN v.fk_client END) AS [Clients Visiter Non Programmer],
@@ -210,6 +211,7 @@ FROM [TrizDistributionMekahli].[dbo].[Vente] v
     INNER JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON v.fk_camion = csa.fk_camion
     -- نربط مع الجدول اللي فيه fk_journee
     INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs ON cs.fk_camion = csa.fk_camion AND cs.fk_secteur = csa.fk_secteur
+    INNER JOIN [TrizDistributionMekahli].[dbo].[camion] cam ON cam.id_camion = v.fk_camion -- 👈 الربط مع جدول camion
     INNER JOIN [TrizDistributionMekahli].[dbo].[secteur] s ON csa.fk_secteur = s.id_secteur
     LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc ON s.id_secteur = sc.fk_secteur AND v.fk_client = sc.fk_client
     INNER JOIN ProgrammedClients pc ON s.id_secteur = pc.fk_secteur
@@ -221,6 +223,7 @@ WHERE
 GROUP BY
     v.date,
     v.fk_camion,
+    cam.code_camion,
     s.Nom_secteur,
     pc.ClientsProgrammer
 ORDER BY
