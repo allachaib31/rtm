@@ -11,7 +11,80 @@ class RtmController {
                 dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
             }
             let query;
-            if (typeOfData == "Commande") {
+            if(typeOfData == "CashVan"){
+                query = `
+                SELECT 
+    v.id_vente,
+    v.fk_vendeur,
+    v.fk_camion AS fkCamion,
+    ca.code_camion,
+    -- Client Info
+    cl.id_client AS fkClient,
+    cl.Nom AS clientName,
+    com.nomCommune,
+    wil.nomWiaya,
+    
+    -- Vente Info
+    v.date,
+    v.heur,
+    v.total,
+    v.totalAchat,
+    v.totalTTC,
+    v.remise,
+    v.remiseProduit,
+    v.tauxRemise,
+    v.fkTournee,
+    v.fk_type_client,
+    v.fkRemiseGlobal,
+    v.TotalPoid,
+
+    -- GPS and Time Info
+    v.Position_gps_latitude,
+    v.Position_gps_longitude,
+
+    -- Produit Info
+    dv.fk_produit,
+    p.nom_produit,
+    tc.type_client AS typePrix,
+    dv.prix_unitaire,
+    dv.quantite,
+    dv.prix_unitaire * dv.quantite AS CA,
+    p.prixReference,
+    dv.remise AS remiseDetail,
+    dv.valeurRemise,
+    dv.prix_changer,
+    dv.prixAchat,
+    dv.prix_chargementCommercial,
+    p.clissage,
+
+    -- Family Info
+    sf.nom AS nomSousFamille,
+    f.Nom_famille AS nomFamille
+
+FROM 
+    [TrizDistributionMekahli].[dbo].[vente] v
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON v.fk_client = cl.id_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca ON v.fk_camion = ca.id_camion
+LEFT JOIN [TrizDistributionMekahli].[dbo].[detail_vente] dv ON v.id_vente = dv.fk_vente
+LEFT JOIN [TrizDistributionMekahli].[dbo].[produit] p ON dv.fk_produit = p.id_produit
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Sous_famille] sf ON p.fk_Sousfamille = sf.id_sousfamille
+LEFT JOIN [TrizDistributionMekahli].[dbo].[famille] f ON sf.fk_famille = f.id_famille
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Commune] com ON cl.fkCommune = com.codeCommune
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Wilaya] wil ON com.fkWilaya = wil.codeWilaya
+LEFT JOIN [TrizDistributionMekahli].[dbo].[type_client] tc ON cl.fk_type_client = tc.id_type
+LEFT JOIN [TrizDistributionMekahli].[dbo].[versement] vers ON v.fkVersement = vers.id_versement
+
+WHERE 
+    v.fkEtablissement = '${etablissementId}'
+    AND v.date BETWEEN '${startDate}' AND '${endDate}'
+
+ORDER BY 
+    v.id_vente;
+
+                `
+            }
+            else if (typeOfData == "Commande") {
                 query = `
                 SELECT 
             c.id,
@@ -252,37 +325,3 @@ ORDER BY
 }
 
 module.exports = RtmController;
-
-/**
- *  SELECT
-        TOP (1000)
-            c.id, c.fkEtablissement, e.nomEtablissement , ca.code_camion, 
-            cl.id_client as fkClient, cl.Nom, com.nomCommune, c.date, c.heur, c.total, 
-            (c.remise) as remise, statusConfirmation, fkVersement, fkStatutCommande, 
-            dateLivraison, c.validation,fkTypeCommande,fk_camionLivraison,ValiderPar,
-            tauxRemise,remiseProduit, fkCategorieCommande,fk_produit, p.nom_produit,prix_unitaire,
-            quantite,prix_unitaire*quantite as CA,c.remise as RemiseP, dc.valeurRemise,
-            isfree,prix_changer,isRemiseComposer,fkpack, tc.type_client as TypePrix
-        FROM 
-            "TrizDistributionMekahli"."dbo".Commande c,
-            "TrizDistributionMekahli"."dbo".DetailCommande dc,
-            "TrizDistributionMekahli"."dbo".client cl,
-            "TrizDistributionMekahli"."dbo".camion ca,
-            "TrizDistributionMekahli"."dbo".produit p,
-            "TrizDistributionMekahli"."dbo".Sous_famille sf,
-            "TrizDistributionMekahli"."dbo".famille f,
-            "TrizDistributionMekahli"."dbo".Etablissement e,
-            "TrizDistributionMekahli"."dbo".Commune com,
-            "TrizDistributionMekahli"."dbo".type_client tc
-        WHERE 
-            c.fkCamion = ca.id_camion 
-            AND c.fkClient = cl.id_client 
-            AND c.id = dc.fk_commande 
-            AND p.fk_Sousfamille = sf.id_Sousfamille
-            AND dc.fk_produit = p.id_produit 
-            AND c.fkEtablissement ='31010' 
-            AND e.id= c.fkEtablissement 
-            AND com.codeCommune = cl.Fkcommune
-            AND tc.id_type= c.fk_type_client
-            ${dateFilter}
- */
