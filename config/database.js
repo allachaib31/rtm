@@ -30,6 +30,11 @@ class Database extends EventEmitter {
                 password: process.env.MSSQL_PASSWORD,
                 server: process.env.MSSQL_SERVER,  // Could be an IP address or hostname
                 database: process.env.MSSQL_DATABASE,
+                pool: {
+                    max: 10,
+                    min: 0,
+                    idleTimeoutMillis: 30000
+                },
                 options: {
                     encrypt: process.env.MSSQL_ENCRYPT === 'true' 
                     ? true 
@@ -39,6 +44,7 @@ class Database extends EventEmitter {
                 
                     trustServerCertificate: false, // Change to true for self-signed certificates
                 },
+                requestTimeout: 60000 
             };
 
             // Connect to MSSQL

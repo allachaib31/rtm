@@ -244,7 +244,8 @@ ORDER BY
         } catch (err) {
             console.log(err);
             return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({
-                message: 'An error occurred while fetching data'
+                message: 'An error occurred while fetching data',
+                err
             });
         }
     }
