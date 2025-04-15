@@ -235,13 +235,16 @@ SELECT
 FROM TrizStockMekahli.dbo.stock_client_Etablissement sce
 LEFT JOIN TrizStockMekahli.dbo.stock_client c 
     ON c.id = sce.fkClient
-LEFT JOIN TrizDistributionMekahli.dbo.secteur_client sc 
-    ON sc.fk_client = sce.fkClient
-LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cs 
-    ON cs.fk_secteur = sc.fk_secteur
+LEFT JOIN TrizDistributionMekahli.dbo.client sc 
+    ON sc.id_client = c.id
+LEFT JOIN TrizDistributionMekahli.dbo.secteur_client sec 
+    ON sec.fk_client = sc.id_client
+LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
+    ON cas.fk_secteur = sec.fk_secteur
 LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
-    ON cam.id_camion = cs.fk_camion
-WHERE sce.sold <> 0 AND sce.fkEtablissement = 31010;
+    ON cam.id_camion = cas.fk_camion
+WHERE sce.sold <> 0 AND sce.fkEtablissement = 31010 AND sec.isSynchroniser='true';
+
 
   `
                 } else {
