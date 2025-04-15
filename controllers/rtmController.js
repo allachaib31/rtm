@@ -225,11 +225,20 @@ ORDER BY
             } else if (typeOfData == "Credit") {
                 if (etablissementId == "31010") {
                     query = `
+WITH LastSecteurClient AS (
+    SELECT *
+    FROM (
+        SELECT *,
+               ROW_NUMBER() OVER (PARTITION BY fk_client ORDER BY secteur_client.id DESC) AS rn
+        FROM TrizDistributionMekahli.dbo.secteur_client
+    ) AS ranked
+    WHERE rn = 1
+)
+
 SELECT  
     sce.fkClient,
     sce.fkEtablissement,
     sce.sold,
-    --c.Nom AS [Client Name],
     c.raison_social,
     cam.code_camion AS [Camion Name]
 FROM TrizStockMekahli.dbo.stock_client_Etablissement sce
@@ -237,13 +246,15 @@ LEFT JOIN TrizStockMekahli.dbo.stock_client c
     ON c.id = sce.fkClient
 LEFT JOIN TrizDistributionMekahli.dbo.client sc 
     ON sc.id_client = c.id
-LEFT JOIN TrizDistributionMekahli.dbo.secteur_client sec 
+LEFT JOIN LastSecteurClient sec 
     ON sec.fk_client = sc.id_client
 LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
     ON cas.fk_secteur = sec.fk_secteur
 LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
     ON cam.id_camion = cas.fk_camion
-WHERE sce.sold <> 0 AND sce.fkEtablissement = 31010 AND sec.isSynchroniser='true';
+WHERE sce.sold <> 0 
+  AND sce.fkEtablissement = 31010;
+
 
 
   `
