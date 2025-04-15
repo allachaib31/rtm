@@ -225,14 +225,23 @@ ORDER BY
             } else if (typeOfData == "Credit") {
                 if (etablissementId == "31010") {
                     query = `
-WITH LastSecteurClient AS (
-    SELECT *
-    FROM (
-        SELECT *,
-               ROW_NUMBER() OVER (PARTITION BY fk_client ORDER BY secteur_client.id DESC) AS rn
-        FROM TrizDistributionMekahli.dbo.secteur_client
-    ) AS ranked
-    WHERE rn = 1
+WITH SecteurCamionCTE AS (
+    SELECT 
+        sec.fk_client,
+        sec.fk_secteur,
+        cas.fk_camion,
+        cam.code_camion,
+        ROW_NUMBER() OVER (
+            PARTITION BY sec.fk_client 
+            ORDER BY 
+                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
+                sec.id DESC
+        ) AS rn
+    FROM TrizDistributionMekahli.dbo.secteur_client sec
+    LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
+        ON cas.fk_secteur = sec.fk_secteur
+    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
+        ON cam.id_camion = cas.fk_camion
 )
 
 SELECT  
@@ -240,21 +249,16 @@ SELECT
     sce.fkEtablissement,
     sce.sold,
     c.raison_social,
-    cam.code_camion AS [Camion Name]
+    scct.code_camion AS [Camion Name]
 FROM TrizStockMekahli.dbo.stock_client_Etablissement sce
 LEFT JOIN TrizStockMekahli.dbo.stock_client c 
     ON c.id = sce.fkClient
 LEFT JOIN TrizDistributionMekahli.dbo.client sc 
     ON sc.id_client = c.id
-LEFT JOIN LastSecteurClient sec 
-    ON sec.fk_client = sc.id_client
-LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
-    ON cas.fk_secteur = sec.fk_secteur
-LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
-    ON cam.id_camion = cas.fk_camion
+LEFT JOIN SecteurCamionCTE scct 
+    ON scct.fk_client = sc.id_client AND scct.rn = 1
 WHERE sce.sold <> 0 
   AND sce.fkEtablissement = 31010;
-
 
 
   `
@@ -434,66 +438,40 @@ WHERE v.FKEtablissement = '${etablissementId}'AND v.date BETWEEN '${startDate}' 
 
 module.exports = RtmController;
 
-
 /**
- * SET DATEFIRST 7; -- الأحد = 1
-
-;WITH ProgrammedClients AS (
-    SELECT
-        fk_secteur,
-        COUNT(DISTINCT fk_client) AS ClientsProgrammer
-    FROM [TrizDistributionMekahli].[dbo].[secteur_client]
-    GROUP BY fk_secteur
+ * WITH SecteurCamionCTE AS (
+    SELECT 
+        sec.fk_client,
+        sec.fk_secteur,
+        cas.fk_camion,
+        cam.code_camion,
+        ROW_NUMBER() OVER (
+            PARTITION BY sec.fk_client 
+            ORDER BY 
+                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
+                sec.id DESC
+        ) AS rn
+    FROM TrizDistributionMekahli.dbo.secteur_client sec
+    LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
+        ON cas.fk_secteur = sec.fk_secteur
+    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
+        ON cam.id_camion = cas.fk_camion
 )
-SELECT
-    v.date AS [Date],
-    DATENAME(WEEKDAY, v.date) AS [DayName],
-    s.Nom_secteur AS [Name],
-    v.fk_camion,
-    cam.code_camion AS [Camion Name],
-    pc.ClientsProgrammer AS [Clients Programmer],
-    COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Visiter Programmer],
-    COUNT(DISTINCT CASE WHEN sc.fk_client IS NULL THEN v.fk_client END) AS [Clients Visiter Non Programmer],
-    pc.ClientsProgrammer - COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Non Visiter],
-    MIN(v.heur) AS [FirstHeurVente],
-    MAX(v.heur) AS [LastHeurVente],
-    SUM(v.total) AS [Total Vente]  -- 👈 هذا السطر الجديد لحساب مجموع total لكل يوم ولكل camion
-FROM [TrizDistributionMekahli].[dbo].[Vente] v
-    -- 👇 نحسب journee المقابل لتاريخ كل vente
-    CROSS APPLY (
-        SELECT 
-            jour = 
-                CASE DATEPART(WEEKDAY, v.date)
-                    WHEN 7 THEN 1  -- Samedi
-                    WHEN 1 THEN 2  -- Dimanche
-                    WHEN 2 THEN 3  -- Lundi
-                    WHEN 3 THEN 4  -- Mardi
-                    WHEN 4 THEN 5  -- Mercredi
-                    WHEN 5 THEN 6  -- Jeudi
-                    WHEN 6 THEN 7  -- Vendredi
-                END
-    ) AS j
-    INNER JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON v.fk_camion = csa.fk_camion
-    INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs 
-        ON cs.fk_camion = csa.fk_camion 
-        AND cs.fk_secteur = csa.fk_secteur 
-        AND cs.fk_journee = j.jour
-    INNER JOIN [TrizDistributionMekahli].[dbo].[camion] cam ON cam.id_camion = v.fk_camion
-    INNER JOIN [TrizDistributionMekahli].[dbo].[secteur] s ON csa.fk_secteur = s.id_secteur
-    LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
-        ON s.id_secteur = sc.fk_secteur AND v.fk_client = sc.fk_client
-    INNER JOIN ProgrammedClients pc ON s.id_secteur = pc.fk_secteur
-WHERE
-    v.date BETWEEN '${startDate}' AND '${endDate}'
-    AND v.fkEtablissement = '${etablissementId}'
-GROUP BY
-    v.date,
-    DATENAME(WEEKDAY, v.date),
-    v.fk_camion,
-    cam.code_camion,
-    s.Nom_secteur,
-    pc.ClientsProgrammer
-ORDER BY
-    v.date, s.Nom_secteur;
+
+SELECT  
+    sce.fkClient,
+    sce.fkEtablissement,
+    sce.sold,
+    c.raison_social,
+    scct.code_camion AS [Camion Name]
+FROM TrizStockMekahli.dbo.stock_client_Etablissement sce
+LEFT JOIN TrizStockMekahli.dbo.stock_client c 
+    ON c.id = sce.fkClient
+LEFT JOIN TrizDistributionMekahli.dbo.client sc 
+    ON sc.id_client = c.id
+LEFT JOIN SecteurCamionCTE scct 
+    ON scct.fk_client = sc.id_client AND scct.rn = 1
+WHERE sce.sold <> 0 
+  AND sce.fkEtablissement = 31010;
 
  */
