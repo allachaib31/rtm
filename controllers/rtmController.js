@@ -224,27 +224,29 @@ ORDER BY
     `
             } else if (typeOfData == "Credit") {
                 query = `
-SELECT 
-    Tc.[id],
-    Tc.[Nom],
-    Tc.[Prenom],
-    Tc.[Telephone],
-    Tc.[adresse],
-    Tc.[sold],
-    Tc.[nomCommune],
-    Tc.[nomWiaya],
-    Tc.[codeWilaya],
-    Tc.[useStock],
-    Tc.[latitude],
-    Tc.[longitude]
-FROM 
-    [TrizDistributionMekahli].[dbo].[TotalCreditClientEtablissementDistribution] AS Tc
-LEFT JOIN 
-    [TrizDistributionMekahli].[dbo].[client] AS c 
-    ON Tc.id = c.id_client
-WHERE 
-    c.fkEtablissement = '${etablissementId}'
-    AND Tc.useStock = 'true';
+SELECT  
+    ce.[id],
+    ce.[fkClient],
+    c.[Nom] AS [Client Name],
+    ce.[fkEtablissement],
+    ce.[sold],
+    ce.[lastDateCommande],
+    ce.[lastDateVersement],
+    ce.[lastDateAchat],
+    ce.[lastDateVisite],
+    ce.[isAchat],
+    ce.[lastDateVisiteMerchandising],
+    ce.[remiseEnPourcent],
+    ce.[consomationRemiseEnPourcent],
+    ce.[HaveQrCode],
+    ce.[soldLitige],
+    ce.[numCommandeClient]
+FROM [TrizDistributionMekahli].[dbo].[client_Etablissement] ce
+INNER JOIN [TrizDistributionMekahli].[dbo].[client] c 
+    ON ce.fkClient = c.id_client
+WHERE ce.fkEtablissement = '${etablissementId}'
+  AND (ce.sold > 0 OR ce.sold < 0);
+
     `
             } else if (typeOfData == "RecapVendeur"){
                 query = `
