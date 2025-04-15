@@ -226,6 +226,8 @@ ORDER BY
                 query = `
 SELECT  
     ce.[id],
+    cs.[fk_camion] AS [CamionID],
+    ca.[code_camion] AS [Camion Name],
     ce.[fkClient],
     c.[Nom] AS [Client Name],
     ce.[fkEtablissement],
@@ -244,8 +246,15 @@ SELECT
 FROM [TrizDistributionMekahli].[dbo].[client_Etablissement] ce
 INNER JOIN [TrizDistributionMekahli].[dbo].[client] c 
     ON ce.fkClient = c.id_client
+INNER JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
+    ON ce.fkClient = sc.fk_client
+INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs 
+    ON sc.fk_secteur = cs.fk_secteur
+INNER JOIN [TrizDistributionMekahli].[dbo].[camion] ca 
+    ON cs.fk_camion = ca.id_camion
 WHERE ce.fkEtablissement = '${etablissementId}'
-  AND (ce.sold > 0 OR ce.sold < 0);
+  AND ce.sold <> 0
+ORDER BY ce.[id];
 
     `
             } else if (typeOfData == "RecapVendeur"){
