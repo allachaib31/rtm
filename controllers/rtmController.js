@@ -11,7 +11,7 @@ class RtmController {
                 dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
             }
             let query;
-            if(typeOfData == "CashVan"){
+            if (typeOfData == "CashVan") {
                 query = `
                 SELECT 
     v.id_vente,
@@ -223,41 +223,65 @@ ORDER BY
     l.id;
     `
             } else if (typeOfData == "Credit") {
-                query = `
+                if (etablissementId == "31010") {
+                    query = `
 SELECT  
-    ce.[id],
-    cs.[fk_camion] AS [CamionID],
-    ca.[code_camion] AS [Camion Name],
-    ce.[fkClient],
-    c.[Nom] AS [Client Name],
-    ce.[fkEtablissement],
-    ce.[sold],
-    ce.[lastDateCommande],
-    ce.[lastDateVersement],
-    ce.[lastDateAchat],
-    ce.[lastDateVisite],
-    ce.[isAchat],
-    ce.[lastDateVisiteMerchandising],
-    ce.[remiseEnPourcent],
-    ce.[consomationRemiseEnPourcent],
-    ce.[HaveQrCode],
-    ce.[soldLitige],
-    ce.[numCommandeClient]
-FROM [TrizDistributionMekahli].[dbo].[client_Etablissement] ce
-INNER JOIN [TrizDistributionMekahli].[dbo].[client] c 
-    ON ce.fkClient = c.id_client
-INNER JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
-    ON ce.fkClient = sc.fk_client
-INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs 
-    ON sc.fk_secteur = cs.fk_secteur
-INNER JOIN [TrizDistributionMekahli].[dbo].[camion] ca 
-    ON cs.fk_camion = ca.id_camion
-WHERE ce.fkEtablissement = '${etablissementId}'
-  AND ce.sold <> 0
-ORDER BY ce.[id];
+    sce.fkClient,
+    sce.fkEtablissement,
+    sce.sold,
+    --c.Nom AS [Client Name],
+    c.raison_social,
+    cam.code_camion AS [Camion Name]
+FROM TrizStockMekahli.dbo.stock_client_Etablissement sce
+LEFT JOIN TrizStockMekahli.dbo.stock_client c 
+    ON c.id = sce.fkClient
+LEFT JOIN TrizDistributionMekahli.dbo.secteur_client sc 
+    ON sc.fk_client = sce.fkClient
+LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cs 
+    ON cs.fk_secteur = sc.fk_secteur
+LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
+    ON cam.id_camion = cs.fk_camion
+WHERE sce.sold <> 0 AND sce.fkEtablissement = 31010;
 
-    `
-            } else if (typeOfData == "RecapVendeur"){
+  `
+                } else {
+                    console.log("hhh")
+                    query = `
+                    SELECT  
+                        ce.[id],
+                        cs.[fk_camion] AS [CamionID],
+                        ca.[code_camion] AS [Camion Name],
+                        ce.[fkClient],
+                        c.[Nom] AS [Client Name],
+                        ce.[fkEtablissement],
+                        ce.[sold],
+                        ce.[lastDateCommande],
+                        ce.[lastDateVersement],
+                        ce.[lastDateAchat],
+                        ce.[lastDateVisite],
+                        ce.[isAchat],
+                        ce.[lastDateVisiteMerchandising],
+                        ce.[remiseEnPourcent],
+                        ce.[consomationRemiseEnPourcent],
+                        ce.[HaveQrCode],
+                        ce.[soldLitige],
+                        ce.[numCommandeClient]
+                    FROM [TrizDistributionMekahli].[dbo].[client_Etablissement] ce
+                    INNER JOIN [TrizDistributionMekahli].[dbo].[client] c 
+                        ON ce.fkClient = c.id_client
+                    INNER JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
+                        ON ce.fkClient = sc.fk_client
+                    INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs 
+                        ON sc.fk_secteur = cs.fk_secteur
+                    INNER JOIN [TrizDistributionMekahli].[dbo].[camion] ca 
+                        ON cs.fk_camion = ca.id_camion
+                    WHERE ce.fkEtablissement = '${etablissementId}'
+                      AND ce.sold <> 0
+                    ORDER BY ce.[id];
+                    
+                        `
+                }
+            } else if (typeOfData == "RecapVendeur") {
                 query = `
    
 SET DATEFIRST 7; -- الأحد = 1
