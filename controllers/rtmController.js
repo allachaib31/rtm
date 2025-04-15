@@ -363,6 +363,61 @@ ORDER BY
     v.date, s.Nom_secteur;
 
                 `
+            } else if (typeOfData == "RecapRegional") {
+                query = `
+                SELECT
+    v.[id] as id_vente
+        , v.[fk_vendeur]
+        -- Client Info
+      , v.[fk_client] as fkClient
+        , cl.raison_social AS clientName
+
+      -- Vente Info
+      , v.[date]
+      , v.[heur]
+      , v.[total]
+      , v.[totalAchat]
+      , v.[totalTTC]
+      , v.[remise]
+      , v.[remiseProduit]
+      , v.[remise_client]
+      , v.[remiseEnPourcentage]
+      , v.[appliqueSurProduitRemiser]
+      , v.[fkTypeClient]
+      , v.[totalPoid]
+      , v.[totalPoids]
+
+      -- Produit Info
+    -- Produit Info
+    ,dv.fk_produit,
+    p.nom_produit,
+    tc.type_client AS typePrix,
+    dv.prix,
+    dv.quantite,
+    dv.prix * dv.quantite AS CA,
+    p.reference,
+    dv.remise AS remiseDetail,
+    dv.valeurRemise,
+    dv.prixChanger,
+    dv.prixAchat,
+    dv.prixChargement,
+    p.colissage_carton,
+
+    -- Family Info
+    sf.nom AS nomSousFamille,
+    f.Nom_famille AS nomFamille
+
+      
+FROM [TrizStockMekahli].[dbo].[stock_vente] v
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl ON v.fk_client = cl.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_type_client] tc ON cl.FK_type_client = tc.id
+
+
+WHERE v.FKEtablissement = '${etablissementId}'AND v.date BETWEEN '${startDate}' AND '${endDate}'`
             }
 
             const result = await Database.executeSQLQuery(query);
