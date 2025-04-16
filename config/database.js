@@ -44,7 +44,7 @@ class Database extends EventEmitter {
                 
                     trustServerCertificate: false, // Change to true for self-signed certificates
                 },
-                requestTimeout: 120000 
+                requestTimeout: 12000000
             };
 
             // Connect to MSSQL
