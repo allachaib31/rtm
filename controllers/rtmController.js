@@ -3,7 +3,7 @@ const Database = require('../config/database');
 
 class RtmController {
     static async geData(req, res) {
-        const { startDate, endDate, typeOfData, etablissementId } = req.query;
+        const { startDate, endDate, typeOfData, etablissementId, ClientInactive } = req.query;
         console.log(etablissementId)
         try {
             let dateFilter = '';
@@ -422,6 +422,58 @@ FROM [TrizStockMekahli].[dbo].[stock_vente] v
 
 
 WHERE v.FKEtablissement = '${etablissementId}'AND v.date BETWEEN '${startDate}' AND '${endDate}'`
+            } else if (typeOfData == "ClientInactive") {
+                if (ClientInactive == "true") {
+                    query = `
+SELECT DISTINCT
+    cl.id_client,
+    cl.Nom,
+    cl.Adresse,
+    cl.Telephone,
+    cl.wilaya,
+    cm.nomCommune,
+    cl.fkEtablissement,
+    tc.type_client
+FROM [TrizDistributionMekahli].[dbo].[client] cl
+INNER JOIN [TrizDistributionMekahli].[dbo].[type_client] tc 
+    ON cl.FK_type_client = tc.id_type
+INNER JOIN [TrizDistributionMekahli].[dbo].[Commune] cm 
+    ON cm.codeCommune = cl.Fkcommune 
+WHERE cl.fkEtablissement = '${etablissementId}'
+  AND NOT EXISTS (
+      SELECT 1 
+      FROM [TrizDistributionMekahli].[dbo].[vente] v
+      WHERE v.fk_client = cl.id_client
+  );
+
+
+`
+                } else {
+                    query = `
+SELECT 
+    cl.id_client,
+    cl.Nom,
+    cl.Adresse,
+    cl.Telephone,
+    cl.wilaya,
+    cm.nomCommune,
+    cl.fkEtablissement,
+    tc.type_client
+FROM [TrizDistributionMekahli].[dbo].[client] cl
+INNER JOIN [TrizDistributionMekahli].[dbo].[type_client] tc 
+    ON cl.FK_type_client = tc.id_type
+INNER JOIN [TrizDistributionMekahli].[dbo].[Commune] cm 
+    ON cm.codeCommune = cl.Fkcommune 
+WHERE cl.fkEtablissement = '${etablissementId}'
+  AND NOT EXISTS (
+      SELECT 1 
+      FROM [TrizDistributionMekahli].[dbo].[vente] v
+      WHERE v.fk_client = cl.id_client
+        AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+  );
+
+`
+                }
             }
 
             const result = await Database.executeSQLQuery(query);
