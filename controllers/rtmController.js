@@ -31,7 +31,7 @@ class RtmController {
     v.totalAchat,
     v.totalTTC,
     v.remise,
-    v.remiseProduit,
+    v.remise / COUNT(dv.fk_produit) OVER (PARTITION BY v.id_vente) AS remiseProduit,
     v.tauxRemise,
     v.fkTournee,
     v.fk_type_client,
