@@ -268,7 +268,6 @@ WHERE sce.sold <> 0
 
   `
                 } else {
-                    console.log("hhh")
                     query = `
                     SELECT  
                         ce.[id],
@@ -304,7 +303,96 @@ WHERE sce.sold <> 0
                     
                         `
                 }
-            } else if (typeOfData == "RecapVendeur") {
+            } else if (typeOfData == "SoldDetails") {
+                query = `
+                WITH
+-- 1) Count trucks per client (if still needed)
+ClientTruckCounts AS (
+  SELECT 
+    fk_client,
+    COUNT(DISTINCT fk_camion) AS camion_count
+  FROM [TrizDistributionMekahli].[dbo].[versement]
+  WHERE [date] BETWEEN '${startDate}' AND '${endDate}'
+  GROUP BY fk_client
+),
+
+-- 2) Total invoiced (ventes) by client / etablissement
+Sales AS (
+  SELECT
+    fk_client,
+    fkEtablissement,
+    SUM(total) AS totalSales
+  FROM [TrizDistributionMekahli].[dbo].[vente]
+  WHERE [date] BETWEEN '${startDate}' AND '${endDate}'
+  GROUP BY fk_client, fkEtablissement
+),
+
+-- 3) Total paid (versements) by client / etablissement
+Payments AS (
+  SELECT 
+    fk_client,
+    fkEtablissement,
+    SUM(montant) AS totalPayments
+  FROM [TrizDistributionMekahli].[dbo].[versement]
+  WHERE [date] BETWEEN '${startDate}' AND '${endDate}'
+  GROUP BY fk_client, fkEtablissement
+),
+
+-- 4) Compute the balance for each client / etablissement
+Balances AS (
+  SELECT
+    s.fk_client,
+    s.fkEtablissement,
+    COALESCE(s.totalSales,   0) AS totalSales,
+    COALESCE(p.totalPayments,0) AS totalPayments,
+    COALESCE(s.totalSales,   0)
+      - COALESCE(p.totalPayments,0) AS montantRestant
+  FROM Sales  s
+  FULL JOIN Payments p 
+    ON s.fk_client      = p.fk_client
+   AND s.fkEtablissement = p.fkEtablissement
+)
+
+SELECT
+    v.id_versement,
+    v.fk_client,
+    cl.Nom            AS clientName,
+    v.fk_camion,
+    ca.code_camion    AS codeCamion,
+    ctc.camion_count,
+    CASE WHEN ctc.camion_count > 1 THEN 'Yes' ELSE 'No' END AS multipleCamions,
+    v.fkEtablissement,
+    v.fk_vendeur,
+    v.[date],
+
+    -- what the client just paid
+    v.montant         AS montantVersement,
+
+    -- sale total (may be NULL if fkVente is missing)
+    vt.total          AS montantVente,
+
+    -- client‑wide remaining balance (independent of fkVente)
+    b.totalSales,
+    b.totalPayments,
+    b.montantRestant,
+
+    v.heur,
+    v.typeVersement,
+    v.fkVente
+FROM [TrizDistributionMekahli].[dbo].[versement] v
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON v.fk_client = cl.id_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca ON v.fk_camion  = ca.id_camion
+LEFT JOIN ClientTruckCounts ctc ON v.fk_client = ctc.fk_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[vente] vt ON v.fkVente   = vt.id_vente
+LEFT JOIN Balances b  ON v.fk_client = b.fk_client AND v.fkEtablissement = b.fkEtablissement
+WHERE 
+ v.[date] BETWEEN '${startDate}' AND '${endDate}'
+ORDER BY v.[date];
+
+`
+            }
+            
+            else if (typeOfData == "RecapVendeur") {
                 query = `
    
 SET DATEFIRST 7; -- الأحد = 1
