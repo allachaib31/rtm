@@ -124,7 +124,9 @@ ORDER BY
             dc.fkpack,
             tc.type_client AS TypePrix,
             sf.nom AS nomSousFamille,
-            f.Nom_famille
+            f.Nom_famille,
+            c.Position_gps_latitude,
+            c.Position_gps_longitude
         FROM 
             "TrizDistributionMekahli"."dbo".Commande c
         JOIN 
@@ -199,7 +201,10 @@ ORDER BY
 
     -- Family Info
     sf.nom AS nomSousFamille,
-    f.Nom_famille AS nomFamille
+    f.Nom_famille AS nomFamille,
+
+    l.Position_gps_latitude,
+    l.Position_gps_longitude
 
 FROM 
     [TrizDistributionMekahli].[dbo].[Livraison] l
