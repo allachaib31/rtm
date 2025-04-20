@@ -305,14 +305,14 @@ WHERE sce.sold <> 0
                 }
             } else if (typeOfData == "SoldDetails") {
                 query = `
-                WITH
+                  WITH
 -- 1) Count trucks per client (if still needed)
 ClientTruckCounts AS (
   SELECT 
     fk_client,
     COUNT(DISTINCT fk_camion) AS camion_count
   FROM [TrizDistributionMekahli].[dbo].[versement]
-  WHERE [date] BETWEEN '${startDate}' AND '${endDate}'
+  WHERE fkEtablissement = '${etablissementId}' AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client
 ),
 
@@ -323,7 +323,7 @@ Sales AS (
     fkEtablissement,
     SUM(total) AS totalSales
   FROM [TrizDistributionMekahli].[dbo].[vente]
-  WHERE [date] BETWEEN '${startDate}' AND '${endDate}'
+  WHERE fkEtablissement = '${etablissementId}' AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client, fkEtablissement
 ),
 
@@ -334,7 +334,7 @@ Payments AS (
     fkEtablissement,
     SUM(montant) AS totalPayments
   FROM [TrizDistributionMekahli].[dbo].[versement]
-  WHERE [date] BETWEEN '${startDate}' AND '${endDate}'
+  WHERE fkEtablissement = '${etablissementId}' AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client, fkEtablissement
 ),
 
@@ -354,6 +354,7 @@ Balances AS (
 )
 
 SELECT
+DISTINCT
     v.id_versement,
     v.fk_client,
     cl.Nom            AS clientName,
@@ -375,23 +376,25 @@ SELECT
     b.totalSales,
     b.totalPayments,
     b.montantRestant,
+    ce.sold,
 
     v.heur,
     v.typeVersement,
     v.fkVente
 FROM [TrizDistributionMekahli].[dbo].[versement] v
 LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON v.fk_client = cl.id_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client_Etablissement] ce on ce.fkClient = cl.id_client and ce.fkEtablissement = '${etablissementId}'
 LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca ON v.fk_camion  = ca.id_camion
 LEFT JOIN ClientTruckCounts ctc ON v.fk_client = ctc.fk_client
 LEFT JOIN [TrizDistributionMekahli].[dbo].[vente] vt ON v.fkVente   = vt.id_vente
 LEFT JOIN Balances b  ON v.fk_client = b.fk_client AND v.fkEtablissement = b.fkEtablissement
 WHERE 
- v.[date] BETWEEN '${startDate}' AND '${endDate}'
+v.fkEtablissement = '${etablissementId}'
+AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
 ORDER BY v.[date];
-
 `
             }
-            
+
             else if (typeOfData == "RecapVendeur") {
                 query = `
    
