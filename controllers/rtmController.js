@@ -304,7 +304,146 @@ WHERE sce.sold <> 0
                         `
                 }
             } else if (typeOfData == "SoldDetails") {
-                query = `
+                if (etablissementId == "31010") {
+                    query = `
+                    WITH
+-- 1) Count trucks per client
+ClientTruckCounts AS (
+  SELECT 
+    fk_client,
+    COUNT(DISTINCT fk_camion) AS camion_count
+  FROM [TrizDistributionMekahli].[dbo].[versement]
+  WHERE fkEtablissement = '31010'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+  GROUP BY fk_client
+),
+
+-- 2) Total invoiced (vente + livraison) by client/établissement
+Sales AS (
+  SELECT
+    fk_client,
+    fkEtablissement,
+    SUM(total) AS totalSales
+  FROM (
+    -- ventes « classiques »
+    SELECT fk_client, fkEtablissement, total
+    FROM [TrizDistributionMekahli].[dbo].[vente]
+    WHERE fkEtablissement = '31010'
+      AND [date] BETWEEN '${startDate}' AND '${endDate}'
+
+    UNION ALL
+
+    -- livraisons liées aux versements
+    SELECT v.fk_client, l.fkEtablissement, l.total
+    FROM [TrizDistributionMekahli].[dbo].[livraison] l
+    JOIN [TrizDistributionMekahli].[dbo].[versement] v
+      ON l.fk_versement = v.id_versement
+    WHERE l.fkEtablissement = '31010'
+      AND l.[date] BETWEEN '${startDate}' AND '${endDate}'
+  ) AS U
+  GROUP BY fk_client, fkEtablissement
+),
+
+-- 3) Total paid (versements) by client/établissement
+Payments AS (
+  SELECT 
+    fk_client,
+    fkEtablissement,
+    SUM(montant) AS totalPayments
+  FROM [TrizDistributionMekahli].[dbo].[versement]
+  WHERE fkEtablissement = '31010'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+  GROUP BY fk_client, fkEtablissement
+),
+
+-- 4) Balance per client/établissement
+Balances AS (
+  SELECT
+    COALESCE(s.fk_client, p.fk_client)        AS fk_client,
+    COALESCE(s.fkEtablissement, p.fkEtablissement) AS fkEtablissement,
+    COALESCE(s.totalSales,   0)               AS totalSales,
+    COALESCE(p.totalPayments,0)               AS totalPayments,
+    COALESCE(s.totalSales,   0)
+      - COALESCE(p.totalPayments,0)           AS montantRestant
+  FROM Sales  s
+  FULL JOIN Payments p 
+    ON s.fk_client       = p.fk_client
+   AND s.fkEtablissement = p.fkEtablissement
+),
+
+-- 5) Mapping versement → montantVente via fkVente ou via livraison
+DeliveriesInvoice AS (
+  SELECT 
+    fk_versement,
+    total AS livraisonTotal
+  FROM [TrizDistributionMekahli].[dbo].[livraison]
+  WHERE fkEtablissement = '31010'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+)
+
+SELECT DISTINCT
+    v.id_versement,
+    v.fk_client,
+    cl.Nom            AS clientName,
+    v.fk_camion,
+    ca.code_camion    AS codeCamion,
+    ctc.camion_count,
+    CASE WHEN ctc.camion_count > 1 THEN 'Yes' ELSE 'No' END AS multipleCamions,
+    v.fkEtablissement,
+    v.fk_vendeur,
+    v.[date],
+
+    -- ce que le client vient de verser
+    v.montant         AS montantVersement,
+
+    -- montant de la vente, pris dans vente.total ou livraison.total
+    COALESCE(vt.total, di.livraisonTotal) AS montantVente,
+
+    -- totaux client‑wide
+    b.totalSales,
+    b.totalPayments,
+    b.montantRestant,
+    ce.sold,
+
+    v.heur,
+    v.typeVersement,
+    v.fkVente
+
+FROM [TrizDistributionMekahli].[dbo].[versement] v
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client]              cl 
+  ON v.fk_client = cl.id_client
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client_Etablissement] ce 
+  ON cl.id_client = ce.fkClient 
+ AND ce.fkEtablissement = '31010'
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]              ca 
+  ON v.fk_camion  = ca.id_camion
+
+LEFT JOIN ClientTruckCounts                                  ctc 
+  ON v.fk_client = ctc.fk_client
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[vente]             vt 
+  ON v.fkVente   = vt.id_vente
+
+LEFT JOIN DeliveriesInvoice                                  di 
+  ON v.id_versement = di.fk_versement
+
+LEFT JOIN Balances                                          b  
+  ON v.fk_client       = b.fk_client 
+ AND v.fkEtablissement = b.fkEtablissement
+
+WHERE 
+  v.fkEtablissement = '31010'
+  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+
+ORDER BY v.[date];
+
+                    `
+                }
+                else {
+                    query = `
                   WITH
 -- 1) Count trucks per client (if still needed)
 ClientTruckCounts AS (
@@ -393,6 +532,7 @@ v.fkEtablissement = '${etablissementId}'
 AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
 ORDER BY v.[date];
 `
+                }
             }
 
             else if (typeOfData == "RecapVendeur") {
