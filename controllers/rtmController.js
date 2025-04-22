@@ -269,44 +269,29 @@ WHERE sce.sold <> 0
   `
                 } else {
                     query = `
-                    SELECT  
-                        ce.[id],
-                        cs.[fk_camion] AS [CamionID],
-                        ca.[code_camion] AS [Camion Name],
-                        ce.[fkClient],
-                        c.[Nom] AS [Client Name],
-                        ce.[fkEtablissement],
-                        ce.[sold],
-                        ce.[lastDateCommande],
-                        ce.[lastDateVersement],
-                        ce.[lastDateAchat],
-                        ce.[lastDateVisite],
-                        ce.[isAchat],
-                        ce.[lastDateVisiteMerchandising],
-                        ce.[remiseEnPourcent],
-                        ce.[consomationRemiseEnPourcent],
-                        ce.[HaveQrCode],
-                        ce.[soldLitige],
-                        ce.[numCommandeClient]
-                    FROM [TrizDistributionMekahli].[dbo].[client_Etablissement] ce
-                    INNER JOIN [TrizDistributionMekahli].[dbo].[client] c 
-                        ON ce.fkClient = c.id_client
-                    INNER JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
-                        ON ce.fkClient = sc.fk_client
-                    INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs 
-                        ON sc.fk_secteur = cs.fk_secteur
-                    INNER JOIN [TrizDistributionMekahli].[dbo].[camion] ca 
-                        ON cs.fk_camion = ca.id_camion
-                    WHERE ce.fkEtablissement = '${etablissementId}'
-                      AND ce.sold <> 0
-                    ORDER BY ce.[id];
+SELECT cc.[id]
+      ,cc.[fk_camion]
+      ,ca.code_camion as [Camion Name]
+      ,cc.[fk_client] as fkClient
+      ,cl.Nom as [Client Name]
+      ,cc.[solde]
+      ,cc.[fkEtablissement]
+      ,cc.[isSynchroniser]
+      ,cc.[isLitigeCredit]
+  FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
+  LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
+    ON cl.id_client = cc.fk_client
+  LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
+    ON ca.id_camion = cc.fk_camion
+   WHERE cc.fkEtablissement = '${etablissementId}'
+
                     
                         `
                 }
             } else if (typeOfData == "SoldDetails") {
                 if (etablissementId == "31010") {
                     query = `
-                    WITH
+                     WITH
 -- 1) Count trucks per client
 ClientTruckCounts AS (
   SELECT 
@@ -314,7 +299,7 @@ ClientTruckCounts AS (
     COUNT(DISTINCT fk_camion) AS camion_count
   FROM [TrizDistributionMekahli].[dbo].[versement]
   WHERE fkEtablissement = '31010'
-    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+    --AND [date] BETWEEN '2025-02-01' AND '2025-04-21'
   GROUP BY fk_client
 ),
 
@@ -329,7 +314,7 @@ Sales AS (
     SELECT fk_client, fkEtablissement, total
     FROM [TrizDistributionMekahli].[dbo].[vente]
     WHERE fkEtablissement = '31010'
-      AND [date] BETWEEN '${startDate}' AND '${endDate}'
+      --AND [date] BETWEEN '2025-02-01' AND '2025-04-21'
 
     UNION ALL
 
@@ -339,7 +324,7 @@ Sales AS (
     JOIN [TrizDistributionMekahli].[dbo].[versement] v
       ON l.fk_versement = v.id_versement
     WHERE l.fkEtablissement = '31010'
-      AND l.[date] BETWEEN '${startDate}' AND '${endDate}'
+      --AND l.[date] BETWEEN '2025-02-01' AND '2025-04-21'
   ) AS U
   GROUP BY fk_client, fkEtablissement
 ),
@@ -352,7 +337,7 @@ Payments AS (
     SUM(montant) AS totalPayments
   FROM [TrizDistributionMekahli].[dbo].[versement]
   WHERE fkEtablissement = '31010'
-    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+    --AND [date] BETWEEN '2025-02-01' AND '2025-04-21'
   GROUP BY fk_client, fkEtablissement
 ),
 
@@ -378,13 +363,13 @@ DeliveriesInvoice AS (
     total AS livraisonTotal
   FROM [TrizDistributionMekahli].[dbo].[livraison]
   WHERE fkEtablissement = '31010'
-    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+    --AND [date] BETWEEN '2025-02-01' AND '2025-04-21'
 )
 
 SELECT DISTINCT
     v.id_versement,
     v.fk_client,
-    cl.Nom            AS clientName,
+    cl.raison_social            AS clientName,
     v.fk_camion,
     ca.code_camion    AS codeCamion,
     ctc.camion_count,
@@ -411,11 +396,11 @@ SELECT DISTINCT
 
 FROM [TrizDistributionMekahli].[dbo].[versement] v
 
-LEFT JOIN [TrizDistributionMekahli].[dbo].[client]              cl 
-  ON v.fk_client = cl.id_client
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]              cl 
+  ON v.fk_client = cl.id
 
-LEFT JOIN [TrizDistributionMekahli].[dbo].[client_Etablissement] ce 
-  ON cl.id_client = ce.fkClient 
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client_Etablissement] ce 
+  ON cl.id = ce.fkClient 
  AND ce.fkEtablissement = '31010'
 
 LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]              ca 
@@ -436,11 +421,10 @@ LEFT JOIN Balances                                          b
 
 WHERE 
   v.fkEtablissement = '31010'
-  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+  --AND v.[date] BETWEEN '2025-02-01' AND '2025-04-21'
 
 ORDER BY v.[date];
-
-                    `
+`
                 }
                 else {
                     query = `
