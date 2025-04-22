@@ -283,7 +283,7 @@ SELECT cc.[id]
     ON cl.id_client = cc.fk_client
   LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
     ON ca.id_camion = cc.fk_camion
-   WHERE cl.fkEtablissement = '${etablissementId}'
+   WHERE cc.fkEtablissement = '${etablissementId}'
 
                     
                         `
