@@ -728,6 +728,75 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] AS ca
   ON ca.id_camion = v.fk_camion
 WHERE v.date = @targetDate AND v.fkEtablissement = '${etablissementId}' order by DistanceMeters desc
 `
+            } else if (typeOfData == "ClientVisiterNonProgrammer") {
+                query = `
+                    SET DATEFIRST 7; -- الأحد = 1
+
+;WITH ProgrammedClients AS (
+    SELECT
+        fk_secteur,
+        COUNT(DISTINCT fk_client) AS ClientsProgrammer
+    FROM [TrizDistributionMekahli].[dbo].[secteur_client]
+    GROUP BY fk_secteur
+)
+SELECT
+DISTINCT
+    v.id_vente,
+    v.fk_client,
+    v.date AS [Date],
+    DATENAME(WEEKDAY, v.date) AS [DayName],
+    s.Nom_secteur AS [Name],
+    v.fk_camion,
+    cam.code_camion AS [Camion Name],
+    CASE 
+      WHEN sc.fk_client IS NOT NULL THEN 'oui'
+      ELSE 'non'
+    END AS [ClientProgrammer]
+FROM [TrizDistributionMekahli].[dbo].[Vente] v
+    -- 👇 نحسب journee المقابل لتاريخ كل vente
+    CROSS APPLY (
+        SELECT 
+            jour = 
+                CASE DATEPART(WEEKDAY, v.date)
+                    WHEN 7 THEN 1  -- Samedi
+                    WHEN 1 THEN 2  -- Dimanche
+                    WHEN 2 THEN 3  -- Lundi
+                    WHEN 3 THEN 4  -- Mardi
+                    WHEN 4 THEN 5  -- Mercredi
+                    WHEN 5 THEN 6  -- Jeudi
+                    WHEN 6 THEN 7  -- Vendredi
+                END
+    ) AS j
+    INNER JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON v.fk_camion = csa.fk_camion
+    INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs 
+        ON cs.fk_camion = csa.fk_camion 
+        AND cs.fk_secteur = csa.fk_secteur 
+        AND cs.fk_journee = j.jour
+    INNER JOIN [TrizDistributionMekahli].[dbo].[camion] cam ON cam.id_camion = v.fk_camion
+    INNER JOIN [TrizDistributionMekahli].[dbo].[secteur] s ON csa.fk_secteur = s.id_secteur
+    LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
+        ON s.id_secteur = sc.fk_secteur AND v.fk_client = sc.fk_client
+    INNER JOIN ProgrammedClients pc ON s.id_secteur = pc.fk_secteur
+WHERE
+    v.date BETWEEN '${startDate}' AND '${endDate}'
+    AND v.fkEtablissement = '${etablissementId}'
+GROUP BY
+    v.id_vente,
+    v.fk_client,
+    v.date,
+    v.total,
+    DATENAME(WEEKDAY, v.date),
+    v.fk_camion,
+    cam.code_camion,
+    s.Nom_secteur,
+    pc.ClientsProgrammer,
+    CASE 
+      WHEN sc.fk_client IS NOT NULL THEN 'oui'
+      ELSE 'non'
+    END
+ORDER BY
+    v.date, s.Nom_secteur;
+                `
             }
 
             const result = await Database.executeSQLQuery(query);
