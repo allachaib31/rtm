@@ -518,7 +518,6 @@ ORDER BY v.[date];
 `
                 }
             }
-
             else if (typeOfData == "RecapVendeur") {
                 query = `
    
@@ -694,6 +693,41 @@ WHERE cl.fkEtablissement = '${etablissementId}'
 
 `
                 }
+            } else if (typeOfData == "FakePosition") {
+                query = `
+DECLARE @targetDate DATE = '2025-04-23';
+
+SELECT
+    v.id_vente,
+    v.fkEtablissement,
+    ca.code_camion,
+    v.fk_client,
+    c.Nom,
+    v.date,
+    v.heur,
+    v.total,
+    v.Position_gps_latitude AS VenteLatitude,
+    v.Position_gps_longitude AS VenteLongitude,
+    c.Position_gps_latitude AS ClientLatitude,
+    c.Position_gps_longitude AS ClientLongitude,
+    CASE
+      WHEN v.Position_gps_latitude  IS NOT NULL
+        AND v.Position_gps_longitude IS NOT NULL
+        AND c.Position_gps_latitude  IS NOT NULL
+        AND c.Position_gps_longitude IS NOT NULL
+      THEN geography::Point(v.Position_gps_latitude, v.Position_gps_longitude, 4326)
+             .STDistance(
+               geography::Point(c.Position_gps_latitude, c.Position_gps_longitude, 4326)
+             )
+      ELSE NULL
+    END AS DistanceMeters
+FROM [TrizDistributionMekahli].[dbo].[vente] AS v
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] AS c
+  ON v.fk_client = c.id_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] AS ca
+  ON ca.id_camion = v.fk_camion
+WHERE v.date = @targetDate AND v.fkEtablissement = '${etablissementId}' order by DistanceMeters desc
+`
             }
 
             const result = await Database.executeSQLQuery(query);
