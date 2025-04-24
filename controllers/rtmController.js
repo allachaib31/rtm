@@ -429,7 +429,7 @@ ORDER BY v.[date];
                 }
                 else {
                     query = `
-                  WITH
+       WITH
 -- 1) Count trucks per client (if still needed)
 ClientTruckCounts AS (
   SELECT 
@@ -500,15 +500,18 @@ DISTINCT
     b.totalSales,
     b.totalPayments,
     b.montantRestant,
-    ce.sold,
+    ce.solde,
 
     v.heur,
     v.typeVersement,
     v.fkVente
 FROM [TrizDistributionMekahli].[dbo].[versement] v
 LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON v.fk_client = cl.id_client
-LEFT JOIN [TrizDistributionMekahli].[dbo].[client_Etablissement] ce on ce.fkClient = cl.id_client and ce.fkEtablissement = '${etablissementId}'
 LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca ON v.fk_camion  = ca.id_camion
+LEFT JOIN CreditCamionClient ce
+  ON ce.fk_client       = v.fk_client
+ AND ce.fk_camion       = v.fk_camion
+ AND ce.fkEtablissement = v.fkEtablissement
 LEFT JOIN ClientTruckCounts ctc ON v.fk_client = ctc.fk_client
 LEFT JOIN [TrizDistributionMekahli].[dbo].[vente] vt ON v.fkVente   = vt.id_vente
 LEFT JOIN Balances b  ON v.fk_client = b.fk_client AND v.fkEtablissement = b.fkEtablissement
