@@ -5,6 +5,7 @@ class RtmController {
     static async geData(req, res) {
         const { startDate, endDate, typeOfData, etablissementId, ClientInactive } = req.query;
         console.log(etablissementId)
+        console.log("typeOfData", typeOfData)
         try {
             let dateFilter = '';
             if (startDate && endDate) {
@@ -695,7 +696,7 @@ WHERE cl.fkEtablissement = '${etablissementId}'
                 }
             } else if (typeOfData == "FakePosition") {
                 query = `
-DECLARE @targetDate DATE = '2025-04-23';
+--DECLARE @targetDate DATE = '2025-04-23';
 
 SELECT
     v.id_vente,
@@ -726,11 +727,12 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[client] AS c
   ON v.fk_client = c.id_client
 LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] AS ca
   ON ca.id_camion = v.fk_camion
-WHERE v.date = @targetDate AND v.fkEtablissement = '${etablissementId}' order by DistanceMeters desc
+WHERE v.date BETWEEN '${startDate}' AND '${endDate}' AND v.fkEtablissement = '${etablissementId}' order by DistanceMeters desc
 `
             } else if (typeOfData == "ClientVisiterNonProgrammer") {
+                console.log("ClientVisiterNonProgrammer")
                 query = `
-                    SET DATEFIRST 7; -- الأحد = 1
+                   SET DATEFIRST 7; -- الأحد = 1
 
 ;WITH ProgrammedClients AS (
     SELECT
