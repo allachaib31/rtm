@@ -518,7 +518,7 @@ SELECT DISTINCT
     v.montant         AS montantVersement,
 
     -- montant de la vente, pris dans vente.total ou livraison.total
-    COALESCE(vt.total, di.livraisonTotal) AS montantVente,
+    vt.total as montantVente,--COALESCE(vt.total, di.livraisonTotal) AS montantVente,
 
     -- totaux client‑wide
     b.totalSales,
