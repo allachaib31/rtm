@@ -2,7 +2,7 @@ const { status: httpStatus } = require("http-status");
 const Database = require('../config/database');
 
 class RtmController {
-    static async geData(req, res) {
+    static async getData(req, res) {
         const { startDate, endDate, typeOfData, etablissementId, ClientInactive } = req.query;
         console.log(etablissementId)
         console.log("typeOfData", typeOfData)
@@ -11,7 +11,7 @@ class RtmController {
             if (startDate && endDate) {
                 dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
             }
-            let query;
+            let query, query2 = false;
             if (typeOfData == "CashVan") {
                 query = `
                 SELECT 
@@ -300,7 +300,7 @@ ClientTruckCounts AS (
     COUNT(DISTINCT fk_camion) AS camion_count
   FROM [TrizDistributionMekahli].[dbo].[versement]
   WHERE fkEtablissement = '31010'
-    --AND [date] BETWEEN '2025-02-01' AND '2025-04-21'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client
 ),
 
@@ -315,7 +315,7 @@ Sales AS (
     SELECT fk_client, fkEtablissement, total
     FROM [TrizDistributionMekahli].[dbo].[vente]
     WHERE fkEtablissement = '31010'
-      --AND [date] BETWEEN '2025-02-01' AND '2025-04-21'
+      --AND [date] BETWEEN '${startDate}' AND '${endDate}'
 
     UNION ALL
 
@@ -325,7 +325,7 @@ Sales AS (
     JOIN [TrizDistributionMekahli].[dbo].[versement] v
       ON l.fk_versement = v.id_versement
     WHERE l.fkEtablissement = '31010'
-      --AND l.[date] BETWEEN '2025-02-01' AND '2025-04-21'
+      --AND l.[date] BETWEEN ''${startDate}' AND '${endDate}'
   ) AS U
   GROUP BY fk_client, fkEtablissement
 ),
@@ -338,7 +338,7 @@ Payments AS (
     SUM(montant) AS totalPayments
   FROM [TrizDistributionMekahli].[dbo].[versement]
   WHERE fkEtablissement = '31010'
-    --AND [date] BETWEEN '2025-02-01' AND '2025-04-21'
+    --AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client, fkEtablissement
 ),
 
@@ -364,7 +364,7 @@ DeliveriesInvoice AS (
     total AS livraisonTotal
   FROM [TrizDistributionMekahli].[dbo].[livraison]
   WHERE fkEtablissement = '31010'
-    --AND [date] BETWEEN '2025-02-01' AND '2025-04-21'
+    --AND [date] BETWEEN '${startDate}' AND '${endDate}'
 )
 
 SELECT DISTINCT
@@ -422,10 +422,145 @@ LEFT JOIN Balances                                          b
 
 WHERE 
   v.fkEtablissement = '31010'
-  --AND v.[date] BETWEEN '2025-02-01' AND '2025-04-21'
+  --AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
 
 ORDER BY v.[date];
 `
+                    query2 = `
+                                         WITH
+-- 1) Count trucks per client
+ClientTruckCounts AS (
+  SELECT 
+    fk_client,
+    COUNT(DISTINCT fk_camion) AS camion_count
+  FROM [TrizStockMekahli].[dbo].[stock_versement]
+  WHERE fk_etablissement = '31010'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+  GROUP BY fk_client
+),
+
+-- 2) Total invoiced (vente + livraison) by client/établissement
+Sales AS (
+  SELECT
+    fk_client,
+    fkEtablissement,
+    SUM(total) AS totalSales
+  FROM (
+    -- ventes « classiques »
+    SELECT fk_client, fkEtablissement, total
+    FROM [TrizStockMekahli].[dbo].[stock_vente]
+    WHERE fkEtablissement = '31010'
+      AND [date] BETWEEN '${startDate}' AND '${endDate}'
+
+    UNION ALL
+
+    -- livraisons liées aux versements
+    SELECT v.fk_client, l.fkEtablissement, l.total
+    FROM [TrizStockMekahli].[dbo].[stock_livraison] l
+    JOIN [TrizStockMekahli].[dbo].[stock_versement] v
+      ON l.fk_versementClient = v.id
+    WHERE l.fkEtablissement = '31010'
+      AND l.[date] BETWEEN '${startDate}' AND '${endDate}'
+  ) AS U
+  GROUP BY fk_client, fkEtablissement
+),
+
+-- 3) Total paid (versements) by client/établissement
+Payments AS (
+  SELECT 
+    fk_client,
+    fk_etablissement,
+    SUM(montant) AS totalPayments
+  FROM [TrizStockMekahli].[dbo].[stock_versement]
+  WHERE fk_etablissement = '31010'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+  GROUP BY fk_client, fk_etablissement
+),
+
+-- 4) Balance per client/établissement
+Balances AS (
+  SELECT
+    COALESCE(s.fk_client, p.fk_client)        AS fk_client,
+    COALESCE(s.fkEtablissement, p.fk_etablissement) AS fkEtablissement,
+    COALESCE(s.totalSales,   0)               AS totalSales,
+    COALESCE(p.totalPayments,0)               AS totalPayments,
+    COALESCE(s.totalSales,   0)
+      - COALESCE(p.totalPayments,0)           AS montantRestant
+  FROM Sales  s
+  FULL JOIN Payments p 
+    ON s.fk_client       = p.fk_client
+   AND s.fkEtablissement = p.fk_etablissement
+),
+
+-- 5) Mapping versement → montantVente via fkVente ou via livraison
+DeliveriesInvoice AS (
+  SELECT 
+    fk_versementClient,
+    total AS livraisonTotal
+  FROM [TrizStockMekahli].[dbo].[stock_livraison]
+  WHERE fkEtablissement = '31010'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+)
+
+SELECT DISTINCT
+    v.id,
+    v.fk_client,
+    cl.raison_social            AS clientName,
+    v.fk_camion,
+    ca.code_camion    AS codeCamion,
+    ctc.camion_count,
+    CASE WHEN ctc.camion_count > 1 THEN 'Yes' ELSE 'No' END AS multipleCamions,
+    v.fk_etablissement,
+    v.fk_vendeur,
+    v.[date],
+
+    -- ce que le client vient de verser
+    v.montant         AS montantVersement,
+
+    -- montant de la vente, pris dans vente.total ou livraison.total
+    COALESCE(vt.total, di.livraisonTotal) AS montantVente,
+
+    -- totaux client‑wide
+    b.totalSales,
+    b.totalPayments,
+    b.montantRestant,
+    ce.sold,
+
+    v.heur,
+    v.fk_type_etree_sortie,
+    vt.id
+
+FROM [TrizStockMekahli].[dbo].[stock_versement] v
+
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]              cl 
+  ON v.fk_client = cl.id
+
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client_Etablissement] ce 
+  ON cl.id = ce.fkClient 
+ AND ce.fkEtablissement = '31010'
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]              ca 
+  ON v.fk_camion  = ca.id_camion
+
+LEFT JOIN ClientTruckCounts                                  ctc 
+  ON v.fk_client = ctc.fk_client
+
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_vente]             vt 
+  ON v.id   = vt.fk_versement
+
+LEFT JOIN DeliveriesInvoice                                  di 
+  ON v.id = di.fk_versementClient
+
+LEFT JOIN Balances                                          b  
+  ON v.fk_client       = b.fk_client 
+ AND v.fk_etablissement = b.fkEtablissement
+
+WHERE 
+  v.fk_etablissement = '31010'
+  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+
+ORDER BY v.[date];
+                    `
                 }
                 else {
                     query = `
@@ -805,7 +940,8 @@ ORDER BY
             }
 
             const result = await Database.executeSQLQuery(query);
-            return res.status(httpStatus.OK).send({ result });
+            const result2 = query2 == false ? [] :  await Database.executeSQLQuery(query2);
+            return res.status(httpStatus.OK).send({ result, result2 });
         } catch (err) {
             console.log(err);
             return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({
