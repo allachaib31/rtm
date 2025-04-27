@@ -2,18 +2,18 @@ const { status: httpStatus } = require("http-status");
 const Database = require('../config/database');
 
 class RtmController {
-    static async getData(req, res) {
-        const { startDate, endDate, typeOfData, etablissementId, ClientInactive } = req.query;
-        console.log(etablissementId)
-        console.log("typeOfData", typeOfData)
-        try {
-            let dateFilter = '';
-            if (startDate && endDate) {
-                dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
-            }
-            let query, query2 = false;
-            if (typeOfData == "CashVan") {
-                query = `
+  static async getData(req, res) {
+    const { startDate, endDate, typeOfData, etablissementId, ClientInactive } = req.query;
+    console.log(etablissementId)
+    console.log("typeOfData", typeOfData)
+    try {
+      let dateFilter = '';
+      if (startDate && endDate) {
+        dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
+      }
+      let query, query2 = false;
+      if (typeOfData == "CashVan") {
+        query = `
                 SELECT 
     v.id_vente,
     v.fk_vendeur,
@@ -32,7 +32,13 @@ class RtmController {
     v.totalAchat,
     v.totalTTC,
     v.remise,
-    v.remise / COUNT(dv.fk_produit) OVER (PARTITION BY v.id_vente) AS remiseProduit,
+    --v.remise / COUNT(dv.fk_produit) OVER (PARTITION BY v.id_vente) AS remiseProduit,
+        COALESCE(
+  v.remise 
+    / NULLIF(
+        COUNT(*) OVER (PARTITION BY v.id_vente)
+      , 0)
+, 0) AS remiseProduit,
     v.tauxRemise,
     v.fkTournee,
     v.fk_type_client,
@@ -84,9 +90,9 @@ ORDER BY
     v.id_vente;
 
                 `
-            }
-            else if (typeOfData == "Commande") {
-                query = `
+      }
+      else if (typeOfData == "Commande") {
+        query = `
                 SELECT 
             c.id,
             c.fkEtablissement,
@@ -155,8 +161,8 @@ ORDER BY
             c.id, dc.fk_produit;
         
                 `;
-            } else if (typeOfData == "Livraison") {
-                query = `
+      } else if (typeOfData == "Livraison") {
+        query = `
           SELECT 
     l.id,
     l.fkCommande,
@@ -228,9 +234,9 @@ WHERE
 ORDER BY 
     l.id;
     `
-            } else if (typeOfData == "Credit") {
-                if (etablissementId == "31010") {
-                    query = `
+      } else if (typeOfData == "Credit") {
+        if (etablissementId == "31010") {
+          query = `
 WITH SecteurCamionCTE AS (
     SELECT 
         sec.fk_client,
@@ -268,8 +274,8 @@ WHERE sce.sold <> 0
 
 
   `
-                } else {
-                    query = `
+        } else {
+          query = `
 SELECT cc.[id]
       ,cc.[fk_camion]
       ,ca.code_camion as [Camion Name]
@@ -288,10 +294,10 @@ SELECT cc.[id]
 
                     
                         `
-                }
-            } else if (typeOfData == "SoldDetails") {
-                if (etablissementId == "31010") {
-                    query = `
+        }
+      } else if (typeOfData == "SoldDetails") {
+        if (etablissementId == "31010") {
+          query = `
                      WITH
 -- 1) Count trucks per client
 ClientTruckCounts AS (
@@ -426,7 +432,7 @@ WHERE
 
 ORDER BY v.[date];
 `
-                    query2 = `
+          query2 = `
                                          WITH
 -- 1) Count trucks per client
 ClientTruckCounts AS (
@@ -561,9 +567,9 @@ WHERE
 
 ORDER BY v.[date];
                     `
-                }
-                else {
-                    query = `
+        }
+        else {
+          query = `
        WITH
 -- 1) Count trucks per client (if still needed)
 ClientTruckCounts AS (
@@ -655,10 +661,10 @@ v.fkEtablissement = '${etablissementId}'
 AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
 ORDER BY v.[date];
 `
-                }
-            }
-            else if (typeOfData == "RecapVendeur") {
-                query = `
+        }
+      }
+      else if (typeOfData == "RecapVendeur") {
+        query = `
    
 SET DATEFIRST 7; -- الأحد = 1
 
@@ -725,8 +731,8 @@ ORDER BY
     v.date, s.Nom_secteur;
 
                 `
-            } else if (typeOfData == "RecapRegional") {
-                query = `
+      } else if (typeOfData == "RecapRegional") {
+        query = `
                 SELECT
     v.[id] as id_vente
         , v.[fk_vendeur]
@@ -780,9 +786,9 @@ FROM [TrizStockMekahli].[dbo].[stock_vente] v
 
 
 WHERE v.FKEtablissement = '${etablissementId}'AND v.date BETWEEN '${startDate}' AND '${endDate}'`
-            } else if (typeOfData == "ClientInactive") {
-                if (ClientInactive == "true") {
-                    query = `
+      } else if (typeOfData == "ClientInactive") {
+        if (ClientInactive == "true") {
+          query = `
 SELECT DISTINCT
     cl.id_client,
     cl.Nom,
@@ -806,8 +812,8 @@ WHERE cl.fkEtablissement = '${etablissementId}'
 
 
 `
-                } else {
-                    query = `
+        } else {
+          query = `
 SELECT 
     cl.id_client,
     cl.Nom,
@@ -831,9 +837,9 @@ WHERE cl.fkEtablissement = '${etablissementId}'
   );
 
 `
-                }
-            } else if (typeOfData == "FakePosition") {
-                query = `
+        }
+      } else if (typeOfData == "FakePosition") {
+        query = `
 --DECLARE @targetDate DATE = '2025-04-23';
 
 SELECT
@@ -867,9 +873,9 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] AS ca
   ON ca.id_camion = v.fk_camion
 WHERE v.date BETWEEN '${startDate}' AND '${endDate}' AND v.fkEtablissement = '${etablissementId}' order by DistanceMeters desc
 `
-            } else if (typeOfData == "ClientVisiterNonProgrammer") {
-                console.log("ClientVisiterNonProgrammer")
-                query = `
+      } else if (typeOfData == "ClientVisiterNonProgrammer") {
+        console.log("ClientVisiterNonProgrammer")
+        query = `
                    SET DATEFIRST 7; -- الأحد = 1
 
 ;WITH ProgrammedClients AS (
@@ -937,19 +943,19 @@ GROUP BY
 ORDER BY
     v.date, s.Nom_secteur;
                 `
-            }
+      }
 
-            const result = await Database.executeSQLQuery(query);
-            const result2 = query2 == false ? [] :  await Database.executeSQLQuery(query2);
-            return res.status(httpStatus.OK).send({ result, result2 });
-        } catch (err) {
-            console.log(err);
-            return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({
-                message: 'An error occurred while fetching data',
-                err
-            });
-        }
+      const result = await Database.executeSQLQuery(query);
+      const result2 = query2 == false ? [] : await Database.executeSQLQuery(query2);
+      return res.status(httpStatus.OK).send({ result, result2 });
+    } catch (err) {
+      console.log(err);
+      return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({
+        message: 'An error occurred while fetching data',
+        err
+      });
     }
+  }
 }
 
 module.exports = RtmController;
