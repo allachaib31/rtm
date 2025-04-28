@@ -1,5 +1,27 @@
 const Admin = require('../models/Admin');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'change_this_in_prod';
+
+exports.login = async (req, res) => {
+    const { username, password } = req.body;
+    console.log(req.body)
+    try {
+        const user = await Admin.findOne({ username });
+        if (!user || !await bcrypt.compare(password, user.password)) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+        const token = jwt.sign({ id: user._id, username, permission: user.permission }, JWT_SECRET, { expiresIn: '8h' });
+        res.json({ token });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.verifyToken = async (req, res) => {
+    // authMiddleware has already put payload on req.user
+    res.json({ valid: true, user: req.user });
+  };
 
 // GET /api/admins
 exports.getAdmins = async (req, res) => {

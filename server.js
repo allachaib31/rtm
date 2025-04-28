@@ -84,6 +84,8 @@ class Server {
     routes() {
         this.app.use('/api/v1.0/', require('./routes/rtmRoute'));
         this.app.use('/api/v1.0/admins', require('./routes/admins'));
+        this.app.use('/api/v1.0/auth', require('./routes/auth'));
+
         const indexPath = path.resolve(__dirname, 'dist', 'index.html');
         this.app.get('/', (req, res) => {
             res.sendFile(path.join(__dirname, 'dist', 'index.html'));

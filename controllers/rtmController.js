@@ -4,9 +4,13 @@ const Database = require('../config/database');
 class RtmController {
   static async getData(req, res) {
     const { startDate, endDate, typeOfData, etablissementId, ClientInactive } = req.query;
+    const user = req.user;
     console.log(etablissementId)
     console.log("typeOfData", typeOfData)
     try {
+      if(!user.permission[typeOfData]) {
+        return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
+      }
       let dateFilter = '';
       if (startDate && endDate) {
         dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
