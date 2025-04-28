@@ -509,7 +509,7 @@ DeliveriesInvoice AS (
 )
 
 SELECT DISTINCT
-    v.id,
+    v.id as id_versement,
     v.fk_client,
     cl.raison_social            AS clientName,
     v.fk_camion,
