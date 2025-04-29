@@ -694,13 +694,13 @@ VisitesSans AS (
     END
   ) AS j
 
-  INNER JOIN dbo.CamionSecteurAffecter csa 
+  INNER JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa 
     ON vs.fkCamion = csa.fk_camion
-  INNER JOIN dbo.camion_secteur cs
+  INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs
     ON cs.fk_camion = csa.fk_camion
    AND cs.fk_secteur = csa.fk_secteur
    AND cs.fk_journee = j.jour
-  INNER JOIN dbo.secteur_client sc
+  INNER JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc
     ON sc.fk_client = vs.fkClient 
    AND sc.fk_secteur = csa.fk_secteur
 
@@ -1002,40 +1002,3 @@ ORDER BY
 
 module.exports = RtmController;
 
-/**
- * WITH SecteurCamionCTE AS (
-    SELECT 
-        sec.fk_client,
-        sec.fk_secteur,
-        cas.fk_camion,
-        cam.code_camion,
-        ROW_NUMBER() OVER (
-            PARTITION BY sec.fk_client 
-            ORDER BY 
-                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
-                sec.id DESC
-        ) AS rn
-    FROM TrizDistributionMekahli.dbo.secteur_client sec
-    LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
-        ON cas.fk_secteur = sec.fk_secteur
-    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
-        ON cam.id_camion = cas.fk_camion
-)
-
-SELECT  
-    sce.fkClient,
-    sce.fkEtablissement,
-    sce.sold,
-    c.raison_social,
-    scct.code_camion AS [Camion Name]
-FROM TrizStockMekahli.dbo.stock_client_Etablissement sce
-LEFT JOIN TrizStockMekahli.dbo.stock_client c 
-    ON c.id = sce.fkClient
-LEFT JOIN TrizDistributionMekahli.dbo.client sc 
-    ON sc.id_client = c.id
-LEFT JOIN SecteurCamionCTE scct 
-    ON scct.fk_client = sc.id_client AND scct.rn = 1
-WHERE sce.sold <> 0 
-  AND sce.fkEtablissement = 31010;
-
- */
