@@ -713,6 +713,7 @@ VisitesSans AS (
 SELECT
 DISTINCT
     v.id_vente,
+    v.fk_client,
     v.date AS [Date],
     DATENAME(WEEKDAY, v.date) AS [DayName],
     s.Nom_secteur AS [Name],
@@ -760,6 +761,7 @@ WHERE
     AND v.fkEtablissement = '${etablissementId}'
 GROUP BY
     v.id_vente,
+    v.fk_client,
     v.date,
     v.total,
     DATENAME(WEEKDAY, v.date),
