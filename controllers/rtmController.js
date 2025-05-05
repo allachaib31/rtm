@@ -671,6 +671,7 @@ ORDER BY v.[date];
         query = `
  SET DATEFIRST 7; -- الأحد = 1
 
+-- 1. نحسب العملاء المبرمجين
 ;WITH ProgrammedClients AS (
     SELECT
         fk_secteur,
@@ -678,6 +679,8 @@ ORDER BY v.[date];
     FROM [TrizDistributionMekahli].[dbo].[secteur_client]
     GROUP BY fk_secteur
 ),
+
+-- 2. نحسب زيارات بدون بيع
 VisitesSans AS (
   SELECT
     vs.date,
@@ -685,15 +688,12 @@ VisitesSans AS (
     sc.fk_secteur          AS id_secteur,
     COUNT(DISTINCT vs.fkClient) AS VisitesSansVente
   FROM [TrizDistributionMekahli].[dbo].[VisiteSansVente] vs
-
-  -- figure out which sector that truck was on that day
   CROSS APPLY (
     SELECT jour = CASE DATEPART(WEEKDAY, vs.date)
       WHEN 7 THEN 1 WHEN 1 THEN 2 WHEN 2 THEN 3 WHEN 3 THEN 4
       WHEN 4 THEN 5 WHEN 5 THEN 6 WHEN 6 THEN 7
     END
   ) AS j
-
   INNER JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa 
     ON vs.fkCamion = csa.fk_camion
   INNER JOIN [TrizDistributionMekahli].[dbo].[camion_secteur] cs
@@ -703,13 +703,37 @@ VisitesSans AS (
   INNER JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc
     ON sc.fk_client = vs.fkClient 
    AND sc.fk_secteur = csa.fk_secteur
-
   WHERE
     vs.date BETWEEN '${startDate}' AND '${endDate}'
     AND vs.fkEtablissement = '${etablissementId}'
-
   GROUP BY vs.date, vs.fkCamion, sc.fk_secteur
+),
+
+-- 3. نحسب زيارات متقاربة زمنياً في أقل من 10 ثوانٍ
+FastVisits AS (
+  SELECT
+    date,
+    fkCamion AS fk_camion,
+    fk_secteur AS id_secteur,
+    COUNT(*) AS VisitsWithin10Sec
+  FROM (
+    SELECT
+      vs.date,
+      vs.heur,
+      vs.fkCamion,
+      sc.fk_secteur,
+      LAG(vs.heur) OVER (PARTITION BY vs.fkCamion, vs.date, sc.fk_secteur ORDER BY vs.heur) AS PrevHeur
+    FROM [TrizDistributionMekahli].[dbo].[VisiteSansVente] vs
+    INNER JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc ON sc.fk_client = vs.fkClient
+    WHERE
+      vs.date BETWEEN '${startDate}' AND '${endDate}'
+      AND vs.fkEtablissement = '${etablissementId}'
+  ) AS t
+  WHERE DATEDIFF(SECOND, PrevHeur, heur) <= 30
+  GROUP BY date, fkCamion, fk_secteur
 )
+
+-- 4. استعلام البيع الكامل
 SELECT
 DISTINCT
     v.id_vente,
@@ -724,22 +748,22 @@ DISTINCT
     COUNT(DISTINCT CASE WHEN sc.fk_client IS NULL THEN v.fk_client END) AS [Clients Visiter Non Programmer],
     pc.ClientsProgrammer - COUNT(DISTINCT CASE WHEN sc.fk_client IS NOT NULL THEN v.fk_client END) AS [Clients Non Visiter],
     ISNULL(vs.VisitesSansVente, 0) AS [VisitsWithoutSale],
+    ISNULL(fv.VisitsWithin10Sec, 0) AS [Rapid Succession Visits], -- ✅ العمود الجديد
     MIN(v.heur) AS [FirstHeurVente],
     MAX(v.heur) AS [LastHeurVente],
-    v.total AS [Total Vente]  -- 👈 هذا السطر الجديد لحساب مجموع total لكل يوم ولكل camion
+    v.total AS [Total Vente]
 FROM [TrizDistributionMekahli].[dbo].[Vente] v
-    -- 👇 نحسب journee المقابل لتاريخ كل vente
     CROSS APPLY (
         SELECT 
             jour = 
                 CASE DATEPART(WEEKDAY, v.date)
-                    WHEN 7 THEN 1  -- Samedi
-                    WHEN 1 THEN 2  -- Dimanche
-                    WHEN 2 THEN 3  -- Lundi
-                    WHEN 3 THEN 4  -- Mardi
-                    WHEN 4 THEN 5  -- Mercredi
-                    WHEN 5 THEN 6  -- Jeudi
-                    WHEN 6 THEN 7  -- Vendredi
+                    WHEN 7 THEN 1
+                    WHEN 1 THEN 2
+                    WHEN 2 THEN 3
+                    WHEN 3 THEN 4
+                    WHEN 4 THEN 5
+                    WHEN 5 THEN 6
+                    WHEN 6 THEN 7
                 END
     ) AS j
     INNER JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON v.fk_camion = csa.fk_camion
@@ -752,10 +776,8 @@ FROM [TrizDistributionMekahli].[dbo].[Vente] v
     LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
         ON s.id_secteur = sc.fk_secteur AND v.fk_client = sc.fk_client
     INNER JOIN ProgrammedClients pc ON s.id_secteur = pc.fk_secteur
-      LEFT JOIN VisitesSans vs
-    ON vs.date      = v.date
-   AND vs.fk_camion = v.fk_camion
-   AND vs.id_secteur = s.id_secteur
+    LEFT JOIN VisitesSans vs ON vs.date = v.date AND vs.fk_camion = v.fk_camion AND vs.id_secteur = s.id_secteur
+    LEFT JOIN FastVisits fv ON fv.date = v.date AND fv.fk_camion = v.fk_camion AND fv.id_secteur = s.id_secteur
 WHERE
     v.date BETWEEN '${startDate}' AND '${endDate}'
     AND v.fkEtablissement = '${etablissementId}'
@@ -769,9 +791,11 @@ GROUP BY
     cam.code_camion,
     s.Nom_secteur,
     pc.ClientsProgrammer,
-    vs.VisitesSansVente
+    vs.VisitesSansVente,
+    fv.VisitsWithin10Sec
 ORDER BY
     v.date, s.Nom_secteur;
+
                 `
       } else if (typeOfData == "RecapRegional") {
         query = `
