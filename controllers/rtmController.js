@@ -325,7 +325,7 @@ Sales AS (
     SELECT fk_client, fkEtablissement, total
     FROM [TrizDistributionMekahli].[dbo].[vente]
     WHERE fkEtablissement = '31010'
-      --AND [date] BETWEEN '${startDate}' AND '${endDate}'
+      AND [date] BETWEEN '${startDate}' AND '${endDate}'
 
     UNION ALL
 
@@ -335,7 +335,7 @@ Sales AS (
     JOIN [TrizDistributionMekahli].[dbo].[versement] v
       ON l.fk_versement = v.id_versement
     WHERE l.fkEtablissement = '31010'
-      --AND l.[date] BETWEEN ''${startDate}' AND '${endDate}'
+      AND l.[date] BETWEEN '${startDate}' AND '${endDate}'
   ) AS U
   GROUP BY fk_client, fkEtablissement
 ),
@@ -348,7 +348,7 @@ Payments AS (
     SUM(montant) AS totalPayments
   FROM [TrizDistributionMekahli].[dbo].[versement]
   WHERE fkEtablissement = '31010'
-    --AND [date] BETWEEN '${startDate}' AND '${endDate}'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client, fkEtablissement
 ),
 
@@ -374,7 +374,7 @@ DeliveriesInvoice AS (
     total AS livraisonTotal
   FROM [TrizDistributionMekahli].[dbo].[livraison]
   WHERE fkEtablissement = '31010'
-    --AND [date] BETWEEN '${startDate}' AND '${endDate}'
+    AND [date] BETWEEN '${startDate}' AND '${endDate}'
 )
 
 SELECT DISTINCT
@@ -432,7 +432,7 @@ LEFT JOIN Balances                                          b
 
 WHERE 
   v.fkEtablissement = '31010'
-  --AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
 
 ORDER BY v.[date];
 `
