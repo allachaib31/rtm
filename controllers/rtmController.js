@@ -310,7 +310,7 @@ ClientTruckCounts AS (
     COUNT(DISTINCT fk_camion) AS camion_count
   FROM [TrizDistributionMekahli].[dbo].[versement]
   WHERE fkEtablissement = '31010'
-    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+    --AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client
 ),
 
@@ -445,7 +445,7 @@ ClientTruckCounts AS (
     COUNT(DISTINCT fk_camion) AS camion_count
   FROM [TrizStockMekahli].[dbo].[stock_versement]
   WHERE fk_etablissement = '31010'
-    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+    --AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client
 ),
 
@@ -460,7 +460,7 @@ Sales AS (
     SELECT fk_client, fkEtablissement, total
     FROM [TrizStockMekahli].[dbo].[stock_vente]
     WHERE fkEtablissement = '31010'
-      AND [date] BETWEEN '${startDate}' AND '${endDate}'
+      --AND [date] BETWEEN '${startDate}' AND '${endDate}'
 
     UNION ALL
 
@@ -470,7 +470,7 @@ Sales AS (
     JOIN [TrizStockMekahli].[dbo].[stock_versement] v
       ON l.fk_versementClient = v.id
     WHERE l.fkEtablissement = '31010'
-      AND l.[date] BETWEEN '${startDate}' AND '${endDate}'
+      --AND l.[date] BETWEEN '${startDate}' AND '${endDate}'
   ) AS U
   GROUP BY fk_client, fkEtablissement
 ),
@@ -483,7 +483,7 @@ Payments AS (
     SUM(montant) AS totalPayments
   FROM [TrizStockMekahli].[dbo].[stock_versement]
   WHERE fk_etablissement = '31010'
-    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+    --AND [date] BETWEEN '${startDate}' AND '${endDate}'
   GROUP BY fk_client, fk_etablissement
 ),
 
@@ -509,7 +509,7 @@ DeliveriesInvoice AS (
     total AS livraisonTotal
   FROM [TrizStockMekahli].[dbo].[stock_livraison]
   WHERE fkEtablissement = '31010'
-    AND [date] BETWEEN '${startDate}' AND '${endDate}'
+   --AND [date] BETWEEN '${startDate}' AND '${endDate}'
 )
 
 SELECT DISTINCT
@@ -567,7 +567,7 @@ LEFT JOIN Balances                                          b
 
 WHERE 
   v.fk_etablissement = '31010'
-  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+  --AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
 
 ORDER BY v.[date];
                     `
