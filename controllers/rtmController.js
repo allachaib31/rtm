@@ -15,7 +15,7 @@ class RtmController {
       if (startDate && endDate) {
         dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
       }
-      let query, query2 = false;
+      let query, query2 = false, query3 = false;
       if (typeOfData == "CashVan") {
         query = `
                 SELECT 
@@ -571,6 +571,17 @@ WHERE
 
 ORDER BY v.[date];
                     `
+          query3 = `
+          SELECT 
+  fk_client,
+  fkEtablissement,
+  total as montantVente,
+  date
+FROM [TrizStockMekahli].[dbo].[stock_vente]
+WHERE fkEtablissement = '31010'
+  AND [date] BETWEEN '${startDate}' AND '${endDate}'
+  AND fk_versement IS NULL;
+  `
         }
         else {
           query = `
@@ -1013,7 +1024,8 @@ ORDER BY
 
       const result = await Database.executeSQLQuery(query);
       const result2 = query2 == false ? [] : await Database.executeSQLQuery(query2);
-      return res.status(httpStatus.OK).send({ result, result2 });
+      const result3 = query3 == false ? [] : await Database.executeSQLQuery(query3);
+      return res.status(httpStatus.OK).send({ result, result2, result3 });
     } catch (err) {
       console.log(err);
       return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({
