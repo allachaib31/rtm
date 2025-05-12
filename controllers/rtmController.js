@@ -89,36 +89,29 @@ ORDER BY
     l.id;
         `
         query3 = `
-        SELECT
-        v.FKEtablissement as fkEtablissement
-        -- Client Info
-      , v.[fk_client] as fkClient
-        , cl.raison_social AS clientName
+SELECT
+    v.FKEtablissement AS fkEtablissement
+    ,v.fk_client as fkClient
+    ,cl.raison_social AS clientName
 
-      -- Vente Info
-      , v.[date]
-      , v.[totalTTC]
-    -- Produit Info
-    p.nom_produit,
-    dv.prix,
-    dv.quantite,
-    dv.prix * dv.quantite AS CA,
-    p.colissage_carton AS clissage,
+    ,v.date
+    ,v.totalTTC
+    ,p.nom_produit
+    ,dv.prix
+    ,dv.quantite
+    ,dv.prix * dv.quantite AS CA
+    ,p.colissage_carton AS clissage
+    ,sf.nom AS nomSousFamille
+    ,f.Nom_famille AS nomFamille
 
-    -- Family Info
-    sf.nom AS nomSousFamille,
-    f.Nom_famille AS nomFamille
-
-      
 FROM [TrizStockMekahli].[dbo].[stock_vente] v
     LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl ON v.fk_client = cl.id
     LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
     LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
     LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
     LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
-
-
-WHERE v.FKEtablissement = '31009'AND v.date BETWEEN '${startDate}' AND '${endDate}'
+WHERE v.FKEtablissement = '31009' 
+    AND v.date BETWEEN '${startDate}' AND '${endDate}'
         `
       }
       else if (typeOfData == "CashVan") {
