@@ -10,6 +10,7 @@ const permissionSchema = new mongoose.Schema({
     RecapRegional: { type: Boolean, default: false },
     ClientInactive: { type: Boolean, default: false },
     FakePosition: { type: Boolean, default: false },
+    Journal: { type: Boolean, default: false },
     ClientVisiterNonProgrammer: { type: Boolean, default: false },
 });
 

@@ -8,6 +8,7 @@ class RtmController {
     console.log(etablissementId)
     console.log("typeOfData", typeOfData)
     try {
+      console.log(user.permission)
       if(!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -16,7 +17,79 @@ class RtmController {
         dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
       }
       let query, query2 = false, query3 = false;
-      if (typeOfData == "CashVan") {
+      if (typeOfData == "Journal") {
+        query = `
+          SELECT 
+    V.fkEtablissement,
+    cl.id_client AS fkClient,
+    cl.Nom AS clientName,
+    -- Vente Info
+    v.date,
+    v.totalTTC,
+    -- Produit Info
+    p.nom_produit,
+    dv.prix_unitaire,
+    dv.quantite,
+    dv.prix_unitaire * dv.quantite AS CA,
+    p.clissage,
+
+    -- Family Info
+    sf.nom AS nomSousFamille,
+    f.Nom_famille AS nomFamille
+
+FROM 
+    [TrizDistributionMekahli].[dbo].[vente] v
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON v.fk_client = cl.id_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[detail_vente] dv ON v.id_vente = dv.fk_vente
+LEFT JOIN [TrizDistributionMekahli].[dbo].[produit] p ON dv.fk_produit = p.id_produit
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Sous_famille] sf ON p.fk_Sousfamille = sf.id_sousfamille
+LEFT JOIN [TrizDistributionMekahli].[dbo].[famille] f ON sf.fk_famille = f.id_famille
+WHERE 
+    (v.fkEtablissement = '31002' OR v.fkEtablissement = '31003' OR v.fkEtablissement = '31001' OR v.fkEtablissement = '31009')
+    AND v.date BETWEEN '${startDate}' AND '${endDate}'
+
+ORDER BY 
+    v.id_vente;
+        `
+        query2 = `
+          SELECT 
+    l.fkEtablissement AS fkEtablissement,
+
+    cl.id_client AS fkClient,
+    cl.Nom AS clientName,
+
+    l.date,
+    l.total,
+    
+    p.nom_produit,
+    dl.prix_unitaire,
+    dl.quantite,
+    dl.prix_unitaire * dl.quantite AS CA,
+
+    p.clissage,
+
+    -- Family Info
+    sf.nom AS nomSousFamille,
+    f.Nom_famille AS nomFamille
+
+FROM 
+    [TrizDistributionMekahli].[dbo].[Livraison] l
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON l.fk_client = cl.id_client
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[DetailLivraison] dl ON l.id = dl.fk_livraison
+LEFT JOIN [TrizDistributionMekahli].[dbo].[produit] p ON dl.fk_produit = p.id_produit
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Sous_famille] sf ON p.fk_Sousfamille = sf.id_sousfamille
+LEFT JOIN [TrizDistributionMekahli].[dbo].[famille] f ON sf.fk_famille = f.id_famille
+WHERE 
+    l.fkEtablissement = '31010'
+    AND l.date BETWEEN '${startDate}' AND '${endDate}'
+ORDER BY 
+    l.id;
+        `
+      }
+      else if (typeOfData == "CashVan") {
         query = `
                 SELECT 
     v.id_vente,
