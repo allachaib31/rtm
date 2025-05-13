@@ -32,7 +32,15 @@ class RtmController {
     dv.quantite,
     dv.prix_unitaire * dv.quantite AS CA,
     p.clissage,
-
+    v.remise,
+    --v.remise / COUNT(dv.fk_produit) OVER (PARTITION BY v.id_vente) AS remiseProduit,
+        COALESCE(
+  v.remise 
+    / NULLIF(
+        COUNT(*) OVER (PARTITION BY v.id_vente)
+      , 0)
+, 0) AS remiseProduit,
+dv.valeurRemise,
     -- Family Info
     sf.nom AS nomSousFamille,
     f.Nom_famille AS nomFamille
@@ -66,6 +74,9 @@ ORDER BY
     dl.prix_unitaire,
     dl.quantite,
     dl.prix_unitaire * dl.quantite AS CA,
+    l.remise, 
+    l.remiseProduit,
+    dl.valeurRemise,
 
     p.clissage,
 
@@ -100,6 +111,9 @@ SELECT
     ,dv.prix
     ,dv.quantite
     ,dv.prix * dv.quantite AS CA
+    ,v.[remise]
+    ,v.[remiseProduit]
+    ,dv.valeurRemise
     ,p.colissage_carton AS clissage
     ,sf.nom AS nomSousFamille
     ,f.Nom_famille AS nomFamille
