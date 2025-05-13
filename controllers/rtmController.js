@@ -95,6 +95,7 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[Sous_famille] sf ON p.fk_Sousfamille 
 LEFT JOIN [TrizDistributionMekahli].[dbo].[famille] f ON sf.fk_famille = f.id_famille
 WHERE 
     l.fkEtablissement = '31010'
+    AND l.fkStatutLivraison <> 'visiternonlivrer'
     AND l.date BETWEEN '${startDate}' AND '${endDate}'
 ORDER BY 
     l.id;
