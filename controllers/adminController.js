@@ -13,6 +13,7 @@ exports.login = async (req, res) => {
         }
         console.log(user);
         user.permission.Journal = true
+        user.permission.CreditGlobal = true
         const token = jwt.sign({ id: user._id, username, permission: user.permission }, JWT_SECRET, { expiresIn: '8h' });
         res.json({ token });
     } catch (err) {

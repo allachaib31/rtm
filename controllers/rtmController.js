@@ -9,6 +9,7 @@ class RtmController {
     console.log("typeOfData", typeOfData)
     try {
       console.log(user.permission)
+      user.permission.CreditGlobal = true;
       if(!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -16,7 +17,7 @@ class RtmController {
       if (startDate && endDate) {
         dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
       }
-      let query, query2 = false, query3 = false;
+      let query, query2 = false, query3 = false, query4 = false, query5 = false;
       if (typeOfData == "Journal") {
         query = `
           SELECT 
@@ -128,6 +129,113 @@ FROM [TrizStockMekahli].[dbo].[stock_vente] v
 WHERE v.FKEtablissement = '31009' 
     AND v.date BETWEEN '${startDate}' AND '${endDate}'
         `
+      }
+      else if (typeOfData == "CreditGlobal") {
+        query = `
+          WITH SecteurCamionCTE AS (
+    SELECT 
+        sec.fk_client,
+        sec.fk_secteur,
+        cas.fk_camion,
+        cam.code_camion,
+        ROW_NUMBER() OVER (
+            PARTITION BY sec.fk_client 
+            ORDER BY 
+                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
+                sec.id DESC
+        ) AS rn
+    FROM TrizDistributionMekahli.dbo.secteur_client sec
+    LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
+        ON cas.fk_secteur = sec.fk_secteur
+    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
+        ON cam.id_camion = cas.fk_camion
+)
+
+SELECT  
+    sce.fkClient,
+    sce.fkEtablissement,
+    sce.sold,
+    c.raison_social,
+    scct.code_camion AS [Camion Name]
+FROM TrizStockMekahli.dbo.stock_client_Etablissement sce
+LEFT JOIN TrizStockMekahli.dbo.stock_client c 
+    ON c.id = sce.fkClient
+LEFT JOIN TrizDistributionMekahli.dbo.client sc 
+    ON sc.id_client = c.id
+LEFT JOIN SecteurCamionCTE scct 
+    ON scct.fk_client = sc.id_client AND scct.rn = 1
+WHERE sce.sold <> 0 
+  AND sce.fkEtablissement = 31010;
+        `
+        query2 = `
+          SELECT cc.[id]
+      ,cc.[fk_camion]
+      ,ca.code_camion as [Camion Name]
+      ,cc.[fk_client] as fkClient
+      ,cl.Nom as [Client Name]
+      ,cc.[solde]
+      ,cc.[fkEtablissement]
+      ,cc.[isSynchroniser]
+      ,cc.[isLitigeCredit]
+  FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
+  LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
+    ON cl.id_client = cc.fk_client
+  LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
+    ON ca.id_camion = cc.fk_camion
+   WHERE cc.fkEtablissement = '31002' OR (cl.fkEtablissement = '31002' OR ca.fkEtablissement = '31002')
+
+        `
+        query3 = `
+        SELECT cc.[id]
+    ,cc.[fk_camion]
+    ,ca.code_camion as [Camion Name]
+    ,cc.[fk_client] as fkClient
+    ,cl.Nom as [Client Name]
+    ,cc.[solde]
+    ,cc.[fkEtablissement]
+    ,cc.[isSynchroniser]
+    ,cc.[isLitigeCredit]
+FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
+  ON cl.id_client = cc.fk_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
+  ON ca.id_camion = cc.fk_camion
+ WHERE cc.fkEtablissement = '31003' OR (cl.fkEtablissement = '31003' OR ca.fkEtablissement = '31003')
+      `
+      query4 = `
+      SELECT cc.[id]
+  ,cc.[fk_camion]
+  ,ca.code_camion as [Camion Name]
+  ,cc.[fk_client] as fkClient
+  ,cl.Nom as [Client Name]
+  ,cc.[solde]
+  ,cc.[fkEtablissement]
+  ,cc.[isSynchroniser]
+  ,cc.[isLitigeCredit]
+FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
+ON cl.id_client = cc.fk_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
+ON ca.id_camion = cc.fk_camion
+WHERE cc.fkEtablissement = '31001' OR (cl.fkEtablissement = '31001' OR ca.fkEtablissement = '31001')
+    `
+    query5 = `
+    SELECT cc.[id]
+,cc.[fk_camion]
+,ca.code_camion as [Camion Name]
+,cc.[fk_client] as fkClient
+,cl.Nom as [Client Name]
+,cc.[solde]
+,cc.[fkEtablissement]
+,cc.[isSynchroniser]
+,cc.[isLitigeCredit]
+FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
+ON cl.id_client = cc.fk_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
+ON ca.id_camion = cc.fk_camion
+WHERE cc.fkEtablissement = '31009' OR (cl.fkEtablissement = '31009' OR ca.fkEtablissement = '31009')
+  `
       }
       else if (typeOfData == "CashVan") {
         query = `
@@ -1138,7 +1246,9 @@ ORDER BY
       const result = await Database.executeSQLQuery(query);
       const result2 = query2 == false ? [] : await Database.executeSQLQuery(query2);
       const result3 = query3 == false ? [] : await Database.executeSQLQuery(query3);
-      return res.status(httpStatus.OK).send({ result, result2, result3 });
+      const result4 = query4 == false ? [] : await Database.executeSQLQuery(query4);
+      const result5 = query5 == false ? [] : await Database.executeSQLQuery(query5);
+      return res.status(httpStatus.OK).send({ result, result2, result3, result4, result5 });
     } catch (err) {
       console.log(err);
       return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({
