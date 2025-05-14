@@ -226,23 +226,40 @@ ON ca.id_camion = cc.fk_camion
 WHERE cc.fkEtablissement = '31001' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31001' OR ca.fkEtablissement = '31001')
     `
     query5 = `
-SELECT cc.[id]
-  ,cc.[fk_camion]
-  ,ca.code_camion as [Camion Name]
-  ,cc.[fk_client] as fkClient
-  ,cl.Nom as [Client Name]
-  ,cc.[solde]
-  ,cc.[fkEtablissement]
-  ,cl.fkEtablissement as fkEtablissement2
-  ,ca.fkEtablissement as fkEtablissement3
-  ,cc.[isSynchroniser]
-  ,cc.[isLitigeCredit]
-FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
-LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
-ON cl.id_client = cc.fk_client
-LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
-ON ca.id_camion = cc.fk_camion
-WHERE cc.fkEtablissement = '31009' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31009' OR ca.fkEtablissement = '31009')
+          WITH SecteurCamionCTE AS (
+    SELECT 
+        sec.fk_client,
+        sec.fk_secteur,
+        cas.fk_camion,
+        cam.code_camion,
+        ROW_NUMBER() OVER (
+            PARTITION BY sec.fk_client 
+            ORDER BY 
+                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
+                sec.id DESC
+        ) AS rn
+    FROM TrizDistributionMekahli.dbo.secteur_client sec
+    LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
+        ON cas.fk_secteur = sec.fk_secteur
+    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
+        ON cam.id_camion = cas.fk_camion
+)
+
+SELECT  
+    sce.fkClient,
+    sce.fkEtablissement,
+    sce.sold,
+    c.raison_social,
+    scct.code_camion AS [Camion Name]
+FROM TrizStockMekahli.dbo.stock_client_Etablissement sce
+LEFT JOIN TrizStockMekahli.dbo.stock_client c 
+    ON c.id = sce.fkClient
+LEFT JOIN TrizDistributionMekahli.dbo.client sc 
+    ON sc.id_client = c.id
+LEFT JOIN SecteurCamionCTE scct 
+    ON scct.fk_client = sc.id_client AND scct.rn = 1
+WHERE sce.sold <> 0 
+  AND sce.fkEtablissement = 31009;
   `
       }
       else if (typeOfData == "CashVan") {
