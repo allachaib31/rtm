@@ -182,7 +182,7 @@ WHERE sce.sold <> 0
     ON cl.id_client = cc.fk_client
   LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
     ON ca.id_camion = cc.fk_camion
-   WHERE cc.fkEtablissement = '31002' OR (cl.fkEtablissement = '31002' OR ca.fkEtablissement = '31002')
+   WHERE cc.fkEtablissement = '31002' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31002' OR ca.fkEtablissement = '31002')
 
         `
         query3 = `
@@ -200,7 +200,7 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
   ON cl.id_client = cc.fk_client
 LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
   ON ca.id_camion = cc.fk_camion
- WHERE cc.fkEtablissement = '31003' OR (cl.fkEtablissement = '31003' OR ca.fkEtablissement = '31003')
+ WHERE cc.fkEtablissement = '31003' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31003' OR ca.fkEtablissement = '31003')
       `
       query4 = `
       SELECT cc.[id]
@@ -217,7 +217,7 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
 ON cl.id_client = cc.fk_client
 LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
 ON ca.id_camion = cc.fk_camion
-WHERE cc.fkEtablissement = '31001' OR (cl.fkEtablissement = '31001' OR ca.fkEtablissement = '31001')
+WHERE cc.fkEtablissement = '31001' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31001' OR ca.fkEtablissement = '31001')
     `
     query5 = `
 SELECT cc.[id]
@@ -234,7 +234,7 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
 ON cl.id_client = cc.fk_client
 LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
 ON ca.id_camion = cc.fk_camion
-WHERE cc.fkEtablissement = '31009' OR (cl.fkEtablissement = '31009' OR ca.fkEtablissement = '31009')
+WHERE cc.fkEtablissement = '31009' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31009' OR ca.fkEtablissement = '31009')
   `
       }
       else if (typeOfData == "CashVan") {
