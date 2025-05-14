@@ -460,7 +460,7 @@ ORDER BY
     l.id;
     `
       } else if (typeOfData == "Credit") {
-        if (etablissementId == "31010") {
+        if (etablissementId == "31010" || etablissementId == "31009") {
           query = `
 WITH SecteurCamionCTE AS (
     SELECT 
@@ -495,7 +495,7 @@ LEFT JOIN TrizDistributionMekahli.dbo.client sc
 LEFT JOIN SecteurCamionCTE scct 
     ON scct.fk_client = sc.id_client AND scct.rn = 1
 WHERE sce.sold <> 0 
-  AND sce.fkEtablissement = 31010;
+  AND sce.fkEtablissement = '${etablissementId}';
 
 
   `
