@@ -220,15 +220,15 @@ ON ca.id_camion = cc.fk_camion
 WHERE cc.fkEtablissement = '31001' OR (cl.fkEtablissement = '31001' OR ca.fkEtablissement = '31001')
     `
     query5 = `
-    SELECT cc.[id]
-,cc.[fk_camion]
-,ca.code_camion as [Camion Name]
-,cc.[fk_client] as fkClient
-,cl.Nom as [Client Name]
-,cc.[solde]
-,cc.[fkEtablissement]
-,cc.[isSynchroniser]
-,cc.[isLitigeCredit]
+SELECT cc.[id]
+  ,cc.[fk_camion]
+  ,ca.code_camion as [Camion Name]
+  ,cc.[fk_client] as fkClient
+  ,cl.Nom as [Client Name]
+  ,cc.[solde]
+  ,cc.[fkEtablissement]
+  ,cc.[isSynchroniser]
+  ,cc.[isLitigeCredit]
 FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
 LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
 ON cl.id_client = cc.fk_client
