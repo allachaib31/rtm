@@ -175,6 +175,8 @@ WHERE sce.sold <> 0
       ,cl.Nom as [Client Name]
       ,cc.[solde]
       ,cc.[fkEtablissement]
+      ,cl.fkEtablissement as fkEtablissement2
+      ,ca.fkEtablissement as fkEtablissement3
       ,cc.[isSynchroniser]
       ,cc.[isLitigeCredit]
   FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
@@ -193,6 +195,8 @@ WHERE sce.sold <> 0
     ,cl.Nom as [Client Name]
     ,cc.[solde]
     ,cc.[fkEtablissement]
+    ,cl.fkEtablissement as fkEtablissement2
+    ,ca.fkEtablissement as fkEtablissement3
     ,cc.[isSynchroniser]
     ,cc.[isLitigeCredit]
 FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
@@ -210,6 +214,8 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
   ,cl.Nom as [Client Name]
   ,cc.[solde]
   ,cc.[fkEtablissement]
+  ,cl.fkEtablissement as fkEtablissement2
+  ,ca.fkEtablissement as fkEtablissement3
   ,cc.[isSynchroniser]
   ,cc.[isLitigeCredit]
 FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
@@ -227,6 +233,8 @@ SELECT cc.[id]
   ,cl.Nom as [Client Name]
   ,cc.[solde]
   ,cc.[fkEtablissement]
+  ,cl.fkEtablissement as fkEtablissement2
+  ,ca.fkEtablissement as fkEtablissement3
   ,cc.[isSynchroniser]
   ,cc.[isLitigeCredit]
 FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
