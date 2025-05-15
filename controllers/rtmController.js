@@ -193,7 +193,7 @@ WHERE sce.sold <> 0
       ,cc.[fk_client] as fkClient
       ,cl.Nom as [Client Name]
       ,cc.[solde]
-      ,cc.[fkEtablissement]
+      ,COALESCE(cc.fkEtablissement, 31002) as fkEtablissement
       ,cl.fkEtablissement as fkEtablissement2
       ,ca.fkEtablissement as fkEtablissement3
       ,cc.[isSynchroniser]
@@ -213,7 +213,7 @@ WHERE sce.sold <> 0
     ,cc.[fk_client] as fkClient
     ,cl.Nom as [Client Name]
     ,cc.[solde]
-    ,cc.[fkEtablissement]
+    ,COALESCE(cc.fkEtablissement, 31003) as fkEtablissement
     ,cl.fkEtablissement as fkEtablissement2
     ,ca.fkEtablissement as fkEtablissement3
     ,cc.[isSynchroniser]
@@ -232,7 +232,7 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
   ,cc.[fk_client] as fkClient
   ,cl.Nom as [Client Name]
   ,cc.[solde]
-  ,cc.[fkEtablissement]
+  ,COALESCE(cc.fkEtablissement, 31001) as fkEtablissement
   ,cl.fkEtablissement as fkEtablissement2
   ,ca.fkEtablissement as fkEtablissement3
   ,cc.[isSynchroniser]
