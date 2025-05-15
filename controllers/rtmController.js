@@ -132,7 +132,7 @@ WHERE v.FKEtablissement = '31009'
       }
       else if (typeOfData == "CreditGlobal") {
         query = `
-          WITH SecteurCamionCTE AS (
+WITH SecteurCamionCTE AS (
     SELECT 
         sec.fk_client,
         sec.fk_secteur,
@@ -141,14 +141,14 @@ WHERE v.FKEtablissement = '31009'
         ROW_NUMBER() OVER (
             PARTITION BY sec.fk_client 
             ORDER BY 
-                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
+                CASE WHEN cam.id IS NOT NULL THEN 0 ELSE 1 END,
                 sec.id DESC
         ) AS rn
     FROM TrizDistributionMekahli.dbo.secteur_client sec
-    LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
+    LEFT JOIN TrizDistributionMekahli.dbo.CamionSecteurAffecter cas 
         ON cas.fk_secteur = sec.fk_secteur
-    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
-        ON cam.id_camion = cas.fk_camion
+    LEFT JOIN TrizStockMekahli.dbo.stock_stockCamion cam 
+        ON cam.id = cas.fk_camion
 )
 
 SELECT  
@@ -165,7 +165,7 @@ LEFT JOIN TrizDistributionMekahli.dbo.client sc
 LEFT JOIN SecteurCamionCTE scct 
     ON scct.fk_client = sc.id_client AND scct.rn = 1
 WHERE sce.sold <> 0 
-  AND sce.fkEtablissement = 31010;
+  AND sce.fkEtablissement = '31010';
         `
         query2 = `
           SELECT cc.[id]
@@ -226,7 +226,7 @@ ON ca.id_camion = cc.fk_camion
 WHERE cc.fkEtablissement = '31001' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31001' OR ca.fkEtablissement = '31001')
     `
     query5 = `
-          WITH SecteurCamionCTE AS (
+WITH SecteurCamionCTE AS (
     SELECT 
         sec.fk_client,
         sec.fk_secteur,
@@ -235,14 +235,14 @@ WHERE cc.fkEtablissement = '31001' OR (cc.fkEtablissement is null and cl.fkEtabl
         ROW_NUMBER() OVER (
             PARTITION BY sec.fk_client 
             ORDER BY 
-                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
+                CASE WHEN cam.id IS NOT NULL THEN 0 ELSE 1 END,
                 sec.id DESC
         ) AS rn
     FROM TrizDistributionMekahli.dbo.secteur_client sec
-    LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
+    LEFT JOIN TrizDistributionMekahli.dbo.CamionSecteurAffecter cas 
         ON cas.fk_secteur = sec.fk_secteur
-    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
-        ON cam.id_camion = cas.fk_camion
+    LEFT JOIN TrizStockMekahli.dbo.stock_stockCamion cam 
+        ON cam.id = cas.fk_camion
 )
 
 SELECT  
@@ -259,7 +259,7 @@ LEFT JOIN TrizDistributionMekahli.dbo.client sc
 LEFT JOIN SecteurCamionCTE scct 
     ON scct.fk_client = sc.id_client AND scct.rn = 1
 WHERE sce.sold <> 0 
-  AND sce.fkEtablissement = 31009;
+  AND sce.fkEtablissement = '31009';
   `
       }
       else if (typeOfData == "CashVan") {
@@ -496,14 +496,14 @@ WITH SecteurCamionCTE AS (
         ROW_NUMBER() OVER (
             PARTITION BY sec.fk_client 
             ORDER BY 
-                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
+                CASE WHEN cam.id IS NOT NULL THEN 0 ELSE 1 END,
                 sec.id DESC
         ) AS rn
     FROM TrizDistributionMekahli.dbo.secteur_client sec
-    LEFT JOIN TrizDistributionMekahli.dbo.camion_secteur cas 
+    LEFT JOIN TrizDistributionMekahli.dbo.CamionSecteurAffecter cas 
         ON cas.fk_secteur = sec.fk_secteur
-    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
-        ON cam.id_camion = cas.fk_camion
+    LEFT JOIN TrizStockMekahli.dbo.stock_stockCamion cam 
+        ON cam.id = cas.fk_camion
 )
 
 SELECT  
