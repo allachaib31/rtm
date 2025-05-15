@@ -10,6 +10,7 @@ class RtmController {
     try {
       console.log(user.permission)
       user.permission.CreditGlobal = true;
+      user.permission.Versement = true;
       if(!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -18,7 +19,25 @@ class RtmController {
         dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
       }
       let query, query2 = false, query3 = false, query4 = false, query5 = false;
-      if (typeOfData == "Journal") {
+      if(typeOfData == "Versement") {
+        query = `
+          SELECT sv.[id]
+      ,sv.[date]
+      ,sv.[heur]
+      ,sv.[fk_etablissement]
+      ,sv.[montant]
+      ,sv.[MontantRecu]
+      ,sv.[fk_client]
+      ,sc.[raison_social]
+      ,sv.[saisie_par]
+      ,sv.[fk_type_etree_sortie]
+      ,sv.[numeroVersement]
+  FROM [TrizStockMekahli].[dbo].[stock_versement] sv
+    LEFT JOIN TrizStockMekahli.dbo.stock_client sc 
+    ON sc.id = sv.fk_client where sv.fk_etablissement = '${etablissementId}' AND date between '${startDate}' and '${endDate}'
+        `
+      }
+      else if (typeOfData == "Journal") {
         query = `
           SELECT 
     V.fkEtablissement,
