@@ -81,44 +81,32 @@ ORDER BY
     v.id_vente;
         `
         query2 = `
-          SELECT 
-    l.fkEtablissement AS fkEtablissement,
+        SELECT
+    v.FKEtablissement AS fkEtablissement
+    ,v.fk_client as fkClient
+    ,cl.raison_social AS clientName
 
-    cl.id_client AS fkClient,
-    cl.Nom AS clientName,
+    ,v.date
+    ,v.totalTTC
+    ,p.nom_produit
+    ,dv.prix
+    ,dv.quantite
+    ,dv.prix * dv.quantite AS CA
+    ,v.[remise]
+    ,v.[remiseProduit]
+    ,dv.valeurRemise
+    ,p.colissage_carton AS clissage
+    ,sf.nom AS nomSousFamille
+    ,f.Nom_famille AS nomFamille
 
-    l.date,
-    l.total,
-    
-    p.nom_produit,
-    dl.prix_unitaire,
-    dl.quantite,
-    dl.prix_unitaire * dl.quantite AS CA,
-    l.remise, 
-    l.remiseProduit,
-    dl.valeurRemise,
-
-    p.clissage,
-
-    -- Family Info
-    sf.nom AS nomSousFamille,
-    f.Nom_famille AS nomFamille
-
-FROM 
-    [TrizDistributionMekahli].[dbo].[Livraison] l
-
-LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON l.fk_client = cl.id_client
-
-LEFT JOIN [TrizDistributionMekahli].[dbo].[DetailLivraison] dl ON l.id = dl.fk_livraison
-LEFT JOIN [TrizDistributionMekahli].[dbo].[produit] p ON dl.fk_produit = p.id_produit
-LEFT JOIN [TrizDistributionMekahli].[dbo].[Sous_famille] sf ON p.fk_Sousfamille = sf.id_sousfamille
-LEFT JOIN [TrizDistributionMekahli].[dbo].[famille] f ON sf.fk_famille = f.id_famille
-WHERE 
-    l.fkEtablissement = '31010'
-    AND l.fkStatutLivraison <> 'visiternonlivrer'
-    AND l.date BETWEEN '${startDate}' AND '${endDate}'
-ORDER BY 
-    l.id;
+FROM [TrizStockMekahli].[dbo].[stock_vente] v
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl ON v.fk_client = cl.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
+WHERE v.FKEtablissement = '31010' 
+    AND v.date BETWEEN '${startDate}' AND '${endDate}'
         `
         query3 = `
 SELECT
