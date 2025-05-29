@@ -32,6 +32,7 @@ class RtmController {
       ,sv.[saisie_par]
       ,sv.[fk_type_etree_sortie]
       ,sv.[numeroVersement]
+      ,sv.[fk_type_reglement]
   FROM [TrizStockMekahli].[dbo].[stock_versement] sv
     LEFT JOIN TrizStockMekahli.dbo.stock_client sc 
     ON sc.id = sv.fk_client where sv.fk_etablissement = '${etablissementId}' AND date between '${startDate}' and '${endDate}'
@@ -1062,6 +1063,7 @@ ORDER BY
 
                 `
       } else if (typeOfData == "RecapRegional") {
+        console.log("reginal")
         query = `
                 SELECT
     v.[id] as id_vente
