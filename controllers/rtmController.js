@@ -348,6 +348,85 @@ ORDER BY
     v.id_vente;
 
                 `
+        if(etablissementId == '31002') {
+          query2 = `
+          SELECT 
+    v.id as id_vente,
+    v.fk_vendeur,
+    v.fk_camion AS fkCamion,
+    ca.code_camion,
+    -- Client Info
+    cl.id AS fkClient,
+    cl.raison_social AS clientName,
+    com.nomCommune,
+    wil.nomWiaya,
+    
+    -- Vente Info
+    v.date,
+    v.heur,
+    v.total,
+    v.totalAchat,
+    v.totalTTC,
+    v.remise,
+    --v.remise / COUNT(dv.fk_produit) OVER (PARTITION BY v.id_vente) AS remiseProduit,
+        COALESCE(
+  v.remise 
+    / NULLIF(
+        COUNT(*) OVER (PARTITION BY v.id)
+      , 0)
+, 0) AS remiseProduit,
+    --v.remise,
+    --v.,
+    v.fkTypeClient as fk_type_client,
+    --v.fkRemiseGlobal,
+    v.totalPoid as TotalPoid,
+
+    -- GPS and Time Info
+    --v.Position_gps_latitude,
+    --v.Position_gps_longitude,
+
+    -- Produit Info
+    dv.fk_produit,
+    p.nom_produit,
+    tc.type_client AS typePrix,
+    dv.prix as prix_unitaire,
+    dv.quantite,
+    dv.prix * dv.quantite AS CA,
+    --p.prixReference,
+    dv.remise AS remiseDetail,
+    dv.valeurRemise,
+    dv.prixChanger as prix_changer,
+    dv.prixAchat,
+    dv.prixChargement as prix_chargementCommercial,
+    p.colissage_carton as clissage,
+
+    -- Family Info
+    sf.nom AS nomSousFamille,
+    f.Nom_famille AS nomFamille
+
+FROM 
+    [TrizStockMekahli].[dbo].[stock_vente] v
+
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl ON v.fk_client = cl.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_stockCamion] ca ON v.fk_camion = ca.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
+LEFT JOIN [TrizStockMekahli].[dbo].[Stock_Commune] com ON cl.fkCommune = com.codeCommune
+LEFT JOIN [TrizStockMekahli].[dbo].[Stock_Wilaya] wil ON com.fkWilaya = wil.codeWilaya
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_type_client] tc ON cl.FK_type_client = tc.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_versement] vers ON v.fk_versement = vers.id
+
+WHERE 
+    v.fkEtablissement = '31002'
+    AND v.date BETWEEN '${startDate}' AND '${endDate}'
+    AND v.fk_camion is NULL and v.fk_vendeur is NULL
+
+ORDER BY 
+    v.id;
+    `
+        }
       }
       else if (typeOfData == "Commande") {
         query = `
