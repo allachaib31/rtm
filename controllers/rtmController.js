@@ -573,6 +573,88 @@ WHERE
 ORDER BY 
     l.id;
     `
+        if(typeOfData == "VentesRicamar") {
+          query2 = `
+          SELECT
+    v.FKEtablissement AS fkEtablissement
+    ,v.fk_client as fkClient
+    ,cl.raison_social AS clientName
+
+    ,v.date
+    ,v.totalTTC
+    ,p.nom_produit
+    ,dv.prix as prix_unitaire
+    ,dv.quantite
+    ,dv.prix * dv.quantite AS CA
+    ,v.[remise]
+    ,v.[remiseProduit]
+    ,dv.valeurRemise
+    ,p.colissage_carton AS clissage
+    ,sf.nom AS nomSousFamille
+    ,f.Nom_famille AS nomFamille
+    ,'Détaillant' AS typePrix
+FROM [TrizStockMekahli].[dbo].[stock_vente] v
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl ON v.fk_client = cl.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
+    LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
+WHERE v.FKEtablissement = '31010' 
+    AND v.date BETWEEN '${startDate}' AND '${endDate}'
+    AND (
+        v.fk_client IN (
+            SELECT DISTINCT sc.fk_client
+            FROM [TrizDistributionMekahli].[dbo].[camion]           c
+            JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa 
+              ON c.id_camion = csa.fk_camion
+            JOIN [TrizDistributionMekahli].[dbo].[secteur_client]     sc 
+              ON csa.fk_secteur = sc.fk_secteur
+            WHERE c.id_camion IN ('843101000028','843101000029','843101000031')
+        )
+        OR v.fk_client IN ('CLG246','CLG405')
+    );`
+    query3 = `
+    SELECT
+    v.FKEtablissement     AS fkEtablissement,
+    v.fk_client           AS fkClient,
+    cl.raison_social      AS clientName,
+    v.date,
+    v.totalTTC,
+    p.nom_produit,
+    dv.prix               AS prix_unitaire,
+    dv.quantite,
+    dv.prix * dv.quantite AS CA,
+    v.[remise],
+    v.[remiseProduit],
+    dv.valeurRemise,
+    p.colissage_carton    AS clissage,
+    sf.nom                AS nomSousFamille,
+    f.Nom_famille         AS nomFamille,
+    'Gros'          AS typePrix
+FROM [TrizStockMekahli].[dbo].[stock_vente]       v
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]       cl ON v.fk_client      = cl.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id             = dv.fk_vente
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit]      p  ON dv.fk_produit    = p.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille]  sf ON p.fk_Sousfamille = sf.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille]      f  ON sf.fk_famille    = f.id
+WHERE
+    v.FKEtablissement = '31010'
+    AND v.date BETWEEN '${startDate}' AND '${endDate}'
+    AND (
+        v.fk_client IN (
+            SELECT DISTINCT sc.fk_client
+            FROM [TrizDistributionMekahli].[dbo].[camion]           c
+            JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa 
+              ON c.id_camion = csa.fk_camion
+            JOIN [TrizDistributionMekahli].[dbo].[secteur_client]     sc 
+              ON csa.fk_secteur = sc.fk_secteur
+            WHERE c.id_camion not IN ('843101000028','843101000029', '843101000031')
+            AND c.id_camion IN ('843101000011', '843101000012')
+        )
+    );
+
+    `
+        }
       } else if (typeOfData == "Credit") {
         if (etablissementId == "31010" || etablissementId == "31009") {
           query = `
