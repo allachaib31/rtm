@@ -11,6 +11,7 @@ class RtmController {
       console.log(user.permission)
       user.permission.CreditGlobal = true;
       user.permission.Versement = true;
+      user.permission.VentesRicamar = true;
       if(!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -349,6 +350,7 @@ ORDER BY
 
                 `
         if(etablissementId == '31002') {
+          console.log("Query for 31002")
           query2 = `
           SELECT 
     v.id as id_vente,
@@ -498,7 +500,7 @@ ORDER BY
             c.id, dc.fk_produit;
         
                 `;
-      } else if (typeOfData == "Livraison") {
+      } else if (typeOfData == "Livraison" || typeOfData == "VentesRicamar") {
         query = `
           SELECT 
     l.id,
