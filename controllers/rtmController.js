@@ -13,7 +13,8 @@ class RtmController {
       user.permission.Versement = true;
       user.permission.VentesRicamar = true;
       user.permission.CmdRicamar = true;
-      if(!user.permission[typeOfData]) {
+      user.permission.StockMagasin = true;
+      if (!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
       let dateFilter = '';
@@ -21,7 +22,7 @@ class RtmController {
         dateFilter = ` AND c.date BETWEEN '${startDate}' AND '${endDate}'`;
       }
       let query, query2 = false, query3 = false, query4 = false, query5 = false;
-      if(typeOfData == "Versement") {
+      if (typeOfData == "Versement") {
         query = `
           SELECT sv.[id]
       ,sv.[date]
@@ -216,7 +217,7 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
   ON ca.id_camion = cc.fk_camion
  WHERE cc.fkEtablissement = '31003' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31003' OR ca.fkEtablissement = '31003')
       `
-      query4 = `
+        query4 = `
       SELECT cc.[id]
   ,cc.[fk_camion]
   ,ca.code_camion as [Camion Name]
@@ -235,7 +236,7 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
 ON ca.id_camion = cc.fk_camion
 WHERE cc.fkEtablissement = '31001' OR (cc.fkEtablissement is null and cl.fkEtablissement = '31001' OR ca.fkEtablissement = '31001')
     `
-    query5 = `
+        query5 = `
 WITH SecteurCamionCTE AS (
     SELECT 
         sec.fk_client,
@@ -350,7 +351,7 @@ ORDER BY
     v.id_vente;
 
                 `
-        if(etablissementId == '31002') {
+        if (etablissementId == '31002') {
           console.log("Query for 31002")
           query2 = `
           SELECT 
@@ -574,7 +575,7 @@ WHERE
 ORDER BY 
     l.id;
     `
-        if(typeOfData == "VentesRicamar") {
+        if (typeOfData == "VentesRicamar") {
           query2 = `
           SELECT
     v.FKEtablissement AS fkEtablissement
@@ -614,7 +615,7 @@ WHERE v.FKEtablissement = '31010'
         )
         OR v.fk_client IN ('CLG246','CLG405')
     );`
-    query3 = `
+          query3 = `
     SELECT
     v.FKEtablissement     AS fkEtablissement,
     v.fk_client           AS fkClient,
@@ -1450,6 +1451,18 @@ ORDER BY
   LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_entree] sde on sde.fk_entree = se.id 
   LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] sp on sp.id = sde.fk_produit
   where fk_fornisseur = '82310102400001' and date between '${startDate}' and '${endDate}'
+        `
+      } else if (typeOfData == "StockMagasin") {
+        query = `
+        SELECT sm.[id]
+        ,sm.[fk_produit]
+        ,sm.[quantite]
+        ,sm.[fk_etablissement]
+        ,sp.[nom_produit] 
+        FROM [TrizStockMekahli].[dbo].[stock_stockMagasin] sm 
+        LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] sp on sp.id = sm.fk_produit 
+        LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf on sp.fk_Sousfamille = sf.id
+        where sm.fk_etablissement = '31010' and sf.nom IN ('RICAMAR', 'CANASTEL', 'POSEIDON', 'PORTOMAR');
         `
       }
 
