@@ -12,6 +12,7 @@ class RtmController {
       user.permission.CreditGlobal = true;
       user.permission.Versement = true;
       user.permission.VentesRicamar = true;
+      user.permission.CmdRicamar = true;
       if(!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -1438,6 +1439,18 @@ GROUP BY
 ORDER BY
     v.date, s.Nom_secteur;
                 `
+      } else if (typeOfData == "CmdRicamar") {
+        query = `
+          SELECT se.[id]
+      ,se.[fk_fornisseur]
+      ,se.[date]
+      ,sde.quantite
+      ,sp.nom_produit
+  FROM [TrizStockMekahli].[dbo].[stock_entree] se
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_entree] sde on sde.fk_entree = se.id 
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] sp on sp.id = sde.fk_produit
+  where fk_fornisseur = '82310102400001' and date between '${startDate}' and '${endDate}'
+        `
       }
 
       const result = await Database.executeSQLQuery(query);
