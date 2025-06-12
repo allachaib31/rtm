@@ -14,6 +14,7 @@ class RtmController {
       user.permission.VentesRicamar = true;
       user.permission.CmdRicamar = true;
       user.permission.StockMagasin = true;
+      user.permission.SeniaPv = true;
       if (!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -1463,6 +1464,54 @@ ORDER BY
         LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] sp on sp.id = sm.fk_produit 
         LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf on sp.fk_Sousfamille = sf.id
         where sm.fk_etablissement = '31010' and sf.nom IN ('RICAMAR', 'CANASTEL', 'POSEIDON', 'PORTOMAR');
+        `
+      } else if (typeOfData == "SeniaPv") {
+        query = `
+          SELECT
+    v.FKEtablissement      AS fkEtablissement,
+    v.fk_client           AS fkClient,
+    cl.raison_social      AS clientName,
+    x.code_camion         AS codeCamion,        -- ← your camion code
+    v.[date],
+    v.totalTTC,
+    p.nom_produit,
+    dv.prix               AS prix_unitaire,
+    dv.quantite,
+    dv.prix * dv.quantite AS CA,
+    v.[remise],
+    v.[remiseProduit],
+    dv.valeurRemise,
+    p.colissage_carton    AS clissage,
+    sf.nom                AS nomSousFamille,
+    f.Nom_famille         AS nomFamille
+FROM [TrizStockMekahli].[dbo].[stock_vente] v
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl
+    ON v.fk_client = cl.id
+-- bring in the mapping client → code_camion
+LEFT JOIN (
+    SELECT
+        sc.fk_client,
+        c.code_camion
+    FROM [TrizDistributionMekahli].[dbo].[camion]            c
+    JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa
+        ON c.id_camion = csa.fk_camion
+    JOIN [TrizDistributionMekahli].[dbo].[secteur_client]      sc
+        ON csa.fk_secteur = sc.fk_secteur
+    WHERE c.id_camion IN ('843100900008','843100900009','843100900010')
+) x
+    ON v.fk_client = x.fk_client
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv
+    ON v.id = dv.fk_vente
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p
+    ON dv.fk_produit = p.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf
+    ON p.fk_Sousfamille = sf.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f
+    ON sf.fk_famille = f.id
+WHERE v.FKEtablissement = '31002'
+  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+  AND x.code_camion IS NOT NULL;
+
         `
       }
 
