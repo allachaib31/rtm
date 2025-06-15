@@ -1475,7 +1475,7 @@ ORDER BY
                          dv.fk_produit,
                          dv.prix,
                          dv.quantite
-            ORDER BY dv.id  -- assume `id` is the PK on stock_detail_vente
+            ORDER BY dv.id 
         ) AS rn
     FROM TrizStockMekahli.dbo.stock_detail_vente AS dv
 )
