@@ -1467,50 +1467,75 @@ ORDER BY
         `
       } else if (typeOfData == "SeniaPv") {
         query = `
-          SELECT
-    v.FKEtablissement      AS fkEtablissement,
-    v.fk_client           AS fkClient,
-    cl.raison_social      AS clientName,
-    x.code_camion         AS codeCamion,        -- ← your camion code
-    v.[date],
+        ;WITH DedupedDetails AS (
+    SELECT
+        dv.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY dv.fk_vente,
+                         dv.fk_produit,
+                         dv.prix,
+                         dv.quantite
+            ORDER BY dv.id  -- assume `id` is the PK on stock_detail_vente
+        ) AS rn
+    FROM TrizStockMekahli.dbo.stock_detail_vente AS dv
+)
+SELECT
+    distinct dv.id,
+    v.FKEtablissement           AS fkEtablissement,
+    v.fk_client                 AS fkClient,
+    cl.raison_social            AS clientName,
+    x.code_camion               AS codeCamion,        -- your camion code
+    v.[date]                    AS date,
     v.totalTTC,
     p.nom_produit,
-    dv.prix               AS prix_unitaire,
+    dv.prix                     AS prix_unitaire,
     dv.quantite,
-    dv.prix * dv.quantite AS CA,
-    v.[remise],
-    v.[remiseProduit],
+    dv.prix * dv.quantite       AS CA,
+    v.remise,
+    v.remiseProduit,
     dv.valeurRemise,
-    p.colissage_carton    AS clissage,
-    sf.nom                AS nomSousFamille,
-    f.Nom_famille         AS nomFamille
-FROM [TrizStockMekahli].[dbo].[stock_vente] v
-LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl
+    p.colissage_carton          AS clissage,
+    sf.nom                      AS nomSousFamille,
+    f.Nom_famille               AS nomFamille
+FROM TrizStockMekahli.dbo.stock_vente AS v
+
+-- client info
+LEFT JOIN TrizStockMekahli.dbo.stock_client AS cl
     ON v.fk_client = cl.id
--- bring in the mapping client → code_camion
+
+-- truck mapping (unchanged)
 LEFT JOIN (
     SELECT
         sc.fk_client,
         c.code_camion
-    FROM [TrizDistributionMekahli].[dbo].[camion]            c
-    JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa
+    FROM TrizDistributionMekahli.dbo.camion               AS c
+    JOIN TrizDistributionMekahli.dbo.CamionSecteurAffecter AS csa
         ON c.id_camion = csa.fk_camion
-    JOIN [TrizDistributionMekahli].[dbo].[secteur_client]      sc
+    JOIN TrizDistributionMekahli.dbo.secteur_client       AS sc
         ON csa.fk_secteur = sc.fk_secteur
     WHERE c.id_camion IN ('843100900008','843100900009','843100900010')
-) x
+) AS x
     ON v.fk_client = x.fk_client
-LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv
+
+-- deduplicated detail join: keep only rn = 1
+JOIN DedupedDetails AS dv
     ON v.id = dv.fk_vente
-LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p
+   AND dv.rn = 1
+
+-- product metadata
+LEFT JOIN TrizStockMekahli.dbo.stock_produit     AS p
     ON dv.fk_produit = p.id
-LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf
+LEFT JOIN TrizStockMekahli.dbo.stock_sousfamille AS sf
     ON p.fk_Sousfamille = sf.id
-LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f
+LEFT JOIN TrizStockMekahli.dbo.stock_famille     AS f
     ON sf.fk_famille = f.id
-WHERE v.FKEtablissement = '31002'
-  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
-  AND x.code_camion IS NOT NULL;
+
+WHERE
+    v.FKEtablissement = '${etablissementId}'
+    AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+    AND x.code_camion IS NOT NULL
+;
+
 
         `
       }
@@ -1533,3 +1558,173 @@ WHERE v.FKEtablissement = '31002'
 
 module.exports = RtmController;
 
+
+
+
+
+/**
+ *           SELECT 
+    l.id,
+    l.fkCommande,
+    l.fkEtablissement AS fkEtablissement,
+    ca.code_camion AS fkCamion,
+
+    -- Client Info
+    cl.id_client AS fkClient,
+    cl.Nom AS clientName,
+    com.nomCommune,
+    wil.nomWiaya,
+
+    l.date,
+    l.heur,
+    l.total,
+    l.totalAchat,
+    v.montant,
+    l.fkStatutLivraison,
+    l.fkRaisonNonLivraison,
+    l.statusConfirmation,
+    l.dateProgrammer,
+    l.fkVisite,
+    co.totalPoid AS Poid,
+
+    -- Rotation
+    rlc.numero AS rotationNumero,
+
+    -- Product Info from DetailLivraison
+    dl.fk_produit,
+    p.nom_produit,
+    p.reference,
+    tc.type_client AS typePrix,
+    dl.prix_unitaire,
+    dl.quantite,
+    dl.prix_unitaire * dl.quantite AS CA,
+    p.prixReference,
+    l.remise, 
+    l.remiseProduit,
+    dl.valeurRemise,
+    dl.prix_changer,
+    dl.prixAchat,
+    dl.prix_chargementCommercial,
+    p.clissage,
+
+    -- Family Info
+    sf.nom AS nomSousFamille,
+    f.Nom_famille AS nomFamille,
+
+    l.Position_gps_latitude,
+    l.Position_gps_longitude
+
+FROM 
+    [TrizDistributionMekahli].[dbo].[Livraison] l
+
+LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl ON l.fk_client = cl.id_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca ON l.fk_camion = ca.id_camion
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Commande] co ON l.fkCommande = co.id
+LEFT JOIN [TrizDistributionMekahli].[dbo].[DetailLivraison] dl ON l.id = dl.fk_livraison
+LEFT JOIN [TrizDistributionMekahli].[dbo].[produit] p ON dl.fk_produit = p.id_produit
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Sous_famille] sf ON p.fk_Sousfamille = sf.id_sousfamille
+LEFT JOIN [TrizDistributionMekahli].[dbo].[famille] f ON sf.fk_famille = f.id_famille
+LEFT JOIN [TrizDistributionMekahli].[dbo].[RotationLivraisonCamion] rlc ON l.fkRotationLivraisonCamion = rlc.id
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Commune] com ON cl.fkCommune = com.codeCommune
+LEFT JOIN [TrizDistributionMekahli].[dbo].[Wilaya] wil ON com.fkWilaya = wil.codeWilaya
+LEFT JOIN [TrizDistributionMekahli].[dbo].[type_client] tc ON cl.fk_type_client = tc.id_type
+LEFT JOIN [TrizDistributionMekahli].[dbo].[versement] v ON l.fk_versement = v.id_versement
+WHERE 
+    l.fkEtablissement = '31010'
+    AND l.date BETWEEN '2025-06-01' AND '2025-06-14'
+    and p.nom_produit = 'RICAMAR HUILE 70' OR p.nom_produit = 'RICAMAR HUILE 70 (20)'
+ORDER BY 
+    l.id;
+ */
+
+
+    /**
+     * 
+     * SELECT
+	v.FKEtablissement       AS fkEtablissement
+    , c.id_camion
+	, c.code_camion
+    , v.fk_client            AS fkClient
+    , cl.raison_social       AS clientName
+    , v.[date]
+    , v.totalTTC
+    , p.nom_produit
+    , dv.prix                AS prix_unitaire
+    , dv.quantite
+    , dv.prix * dv.quantite  AS CA
+    , v.[remise]
+    , v.[remiseProduit]
+    , dv.valeurRemise
+    , p.colissage_carton     AS clissage
+    , sf.nom                 AS nomSousFamille
+    , f.Nom_famille          AS nomFamille
+    , 'Détaillant'           AS typePrix
+FROM [TrizStockMekahli].[dbo].[stock_vente]       v
+	LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]  cl ON v.fk_client = cl.id
+	LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+	LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
+	LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
+	LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
+
+	-- <== new joins to get the truck
+	LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client]     sc ON v.fk_client = sc.fk_client
+	LEFT JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON sc.fk_secteur = csa.fk_secteur
+	LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]            c ON csa.fk_camion = c.id_camion
+
+WHERE v.FKEtablissement = '31010'
+	AND v.[date] BETWEEN '2025-06-01' AND '2025-06-14'
+	AND (
+       -- filter by the trucks you care about
+       c.id_camion IN ('843101000028','843101000029','843101000031')
+	-- OR by specific clients
+	OR v.fk_client   IN ('CLG246','CLG405')
+  );
+
+     */
+
+
+  /**
+   * SELECT
+    v.id,
+     v.FKEtablissement       AS fkEtablissement
+    ,c.id_camion
+    ,c.code_camion
+    ,v.fk_client            AS fkClient
+    ,cl.raison_social       AS clientName
+    ,v.[date]
+    ,v.totalTTC
+    ,p.nom_produit
+    ,dv.prix                AS prix_unitaire
+    ,dv.quantite
+    ,dv.prix * dv.quantite  AS CA
+    ,v.[remise]
+    ,v.[remiseProduit]
+    ,dv.valeurRemise
+    ,p.colissage_carton     AS clissage
+    ,sf.nom                 AS nomSousFamille
+    ,f.Nom_famille          AS nomFamille
+    ,tc.type_client                AS typePrix
+FROM [TrizStockMekahli].[dbo].[stock_vente]         v
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]        cl  ON v.fk_client      = cl.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente]  dv  ON v.id             = dv.fk_vente
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit]       p   ON dv.fk_produit    = p.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille]   sf  ON p.fk_Sousfamille = sf.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille]       f   ON sf.fk_famille    = f.id
+LEFT JOIN [TrizStockMekahli].[dbo].[type_client] tc on tc.id_type = v.fkTypeClient
+
+-- distribution joins to get the truck
+LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client]     sc  ON v.fk_client = sc.fk_client
+LEFT JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON sc.fk_secteur = csa.fk_secteur
+LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]            c   ON csa.fk_camion = c.id_camion
+
+
+WHERE
+    v.FKEtablissement = '31010'
+    AND v.[date] BETWEEN '2025-06-01' AND '2025-06-14'
+    AND (
+        -- clients linked to the specific "Gros" trucks
+        c.id_camion NOT IN ('843101000028','843101000029','843101000031')
+        --AND c.id_camion IN     ('843101000011','843101000012')
+    );
+
+   */
