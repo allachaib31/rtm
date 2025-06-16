@@ -689,6 +689,7 @@ WITH SecteurCamionCTE AS (
         ON cas.fk_secteur = sec.fk_secteur
     LEFT JOIN TrizStockMekahli.dbo.stock_stockCamion cam 
         ON cam.id = cas.fk_camion
+    WHERE cam.fk_etablissement = '${etablissementId}'
 )
 
 SELECT  
