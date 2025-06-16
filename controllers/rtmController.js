@@ -705,8 +705,7 @@ LEFT JOIN TrizDistributionMekahli.dbo.client sc
     ON sc.id_client = c.id
 LEFT JOIN SecteurCamionCTE scct 
     ON scct.fk_client = sc.id_client AND scct.rn = 1
-WHERE sce.sold <> 0 
-  AND sce.fkEtablissement = '${etablissementId}';
+WHERE sce.fkEtablissement = '${etablissementId}';
 
 
   `
