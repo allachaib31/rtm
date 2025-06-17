@@ -341,7 +341,7 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[Sous_famille] sf ON p.fk_Sousfamille 
 LEFT JOIN [TrizDistributionMekahli].[dbo].[famille] f ON sf.fk_famille = f.id_famille
 LEFT JOIN [TrizDistributionMekahli].[dbo].[Commune] com ON cl.fkCommune = com.codeCommune
 LEFT JOIN [TrizDistributionMekahli].[dbo].[Wilaya] wil ON com.fkWilaya = wil.codeWilaya
-LEFT JOIN [TrizDistributionMekahli].[dbo].[type_client] tc ON cl.fk_type_client = tc.id_type
+LEFT JOIN [TrizDistributionMekahli].[dbo].[type_client] tc ON v.fk_type_client = tc.id_type
 LEFT JOIN [TrizDistributionMekahli].[dbo].[versement] vers ON v.fkVersement = vers.id_versement
 
 WHERE 
