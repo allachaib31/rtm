@@ -576,6 +576,63 @@ WHERE
 ORDER BY 
     l.id;
     `
+        query3 =  `
+                SELECT
+v.[id] as id
+, v.[fkCommande]
+, v.[FKEtablissement] as fkEtablissement
+, v.[fk_vendeur]
+-- Client Info
+, v.[fk_client] as fkClient
+, cl.raison_social AS clientName
+, com.nomCommune
+, wil.nomWiaya
+
+-- Vente Info
+, v.[date]
+, v.[heur]
+, v.[total]
+, v.[totalAchat]
+, ver.[montant]
+, v.[fkTypeClient]
+, v.[totalPoid] AS Poid
+, v.[totalPoids] AS Poids
+
+-- Produit Info
+-- Produit Info
+,dv.fk_produit,
+p.nom_produit,
+tc.type_client AS typePrix,
+dv.prix as prix_unitaire,
+dv.quantite,
+dv.prix * dv.quantite AS CA,
+p.reference as prixReference,
+dv.remise,
+v.[remiseProduit]
+,dv.valeurRemise,
+dv.prixChanger as prix_changer,
+dv.prixAchat,
+dv.prixChargement as prix_chargementCommercial,
+p.colissage_carton as clissage,
+
+-- Family Info
+sf.nom AS nomSousFamille,
+f.Nom_famille AS nomFamille
+
+
+FROM [TrizStockMekahli].[dbo].[stock_vente] v
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl ON v.fk_client = cl.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_type_client] tc ON cl.FK_type_client = tc.id
+LEFT JOIN [TrizStockMekahli].[dbo].[Stock_Commune] com ON cl.fkCommune = com.codeCommune
+LEFT JOIN [TrizStockMekahli].[dbo].[Stock_Wilaya] wil ON com.fkWilaya = wil.codeWilaya
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_versement] ver ON v.fk_versement = ver.id
+
+WHERE v.FKEtablissement = '${etablissementId}' AND v.fk_camion is null AND v.date BETWEEN '${startDate}' AND '${endDate}'
+`
         if (typeOfData == "VentesRicamar") {
           query2 = `
           SELECT
