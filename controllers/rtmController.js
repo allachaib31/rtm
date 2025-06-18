@@ -791,7 +791,8 @@ SELECT cc.[id]
     cc.[fkClient],
     cl.[Nom]       AS [Client Name],
     cc.[fkEtablissement],
-    cc.[sold]
+    cc.[sold],
+    cc.[soldLitige]
 FROM [TrizDistributionMekahli].[dbo].[client_Etablissement] cc
 LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
     ON cl.id_client = cc.fkClient
