@@ -572,6 +572,8 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[type_client] tc ON cl.fk_type_client 
 LEFT JOIN [TrizDistributionMekahli].[dbo].[versement] v ON l.fk_versement = v.id_versement
 WHERE 
     l.fkEtablissement = '${etablissementId}'
+    AND
+    l.fkStatutLivraison IN ('livrer')
     AND l.date BETWEEN '${startDate}' AND '${endDate}'
 ORDER BY 
     l.id;
@@ -655,6 +657,7 @@ WHERE v.FKEtablissement = '${etablissementId}' AND v.fk_camion is null AND v.dat
     , f.Nom_famille          AS nomFamille
     ,tc.id_type
     , 'Détaillant'         AS typePrix
+    ,v.fkStatutVente as fkStatutLivraison
 FROM [TrizStockMekahli].[dbo].[stock_vente]       v
 	LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]  cl ON v.fk_client = cl.id
 	LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
@@ -670,6 +673,8 @@ FROM [TrizStockMekahli].[dbo].[stock_vente]       v
 	LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]            c ON csa.fk_camion = c.id_camion
 
 WHERE v.FKEtablissement = '31010'
+    AND
+    v.fkStatutVente IN ('livrer','livrerNP', 'livrerP')
 	AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
 	AND (
        -- filter by the trucks you care about
@@ -700,6 +705,7 @@ SELECT
     ,f.Nom_famille          AS nomFamille
     --,tc.id_type
     ,'Gros'                AS typePrix
+    ,v.fkStatutVente as fkStatutLivraison
 FROM [TrizStockMekahli].[dbo].[stock_vente]         v
 LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]        cl  ON v.fk_client      = cl.id
 LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente]  dv  ON v.id             = dv.fk_vente
@@ -716,13 +722,14 @@ LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]            c   ON csa.fk_cami
 
 WHERE
     v.FKEtablissement = '31010'
+    AND
+    v.fkStatutVente IN ('livrer','livrerNP', 'livrerP')
     AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
     AND (
         -- clients linked to the specific "Gros" trucks
         c.id_camion NOT IN ('843101000028','843101000029','843101000031')
-        --AND c.id_camion IN     ('843101000011','843101000012')
+        AND v.fk_client NOT IN ('CLG246','CLG405')
     );
-
 
     `
         }
