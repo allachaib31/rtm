@@ -786,16 +786,14 @@ SELECT cc.[id]
                         `
           if(etablissementId == '31002') {
             query2 = `
-              SELECT 
-    cc.[id],
-    cc.[fkClient],
-    cl.[Nom]       AS [Client Name],
-    cc.[fkEtablissement],
-    cc.[sold],
-    cc.[soldLitige]
-FROM [TrizDistributionMekahli].[dbo].[client_Etablissement] cc
-LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
-    ON cl.id_client = cc.fkClient
+SELECT cc.[id]
+      ,cc.[fkClient]
+      ,cl.[raison_social]       AS [Client Name]
+      ,cc.[fkEtablissement]
+      ,cc.[sold]
+  FROM [TrizStockMekahli].[dbo].[stock_client_Etablissement] cc
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_client] cl
+    ON cl.id = cc.fkClient
 WHERE 
     cc.fkClient IN (
         '31-00507','31-00509','31-01294','31-01512','31-01514','31-01518',
