@@ -580,11 +580,11 @@ ORDER BY
     l.id;
         `
         query2 = `
-                  SELECT
+SELECT
           distinct dv.id,
-	v.FKEtablissement       AS fkEtablissement
-    , c.id_camion
-	, c.code_camion
+  v.FKEtablissement       AS fkEtablissement
+    --, c.id_camion
+  --, c.code_camion
     , v.fk_client            AS fkClient
     , cl.raison_social       AS clientName
     , v.[date]
@@ -602,37 +602,37 @@ ORDER BY
     ,tc.id_type
     , 'Détaillant'         AS typePrix
     ,v.fkStatutVente as fkStatutLivraison
+    ,v.fkCommande
 FROM [TrizStockMekahli].[dbo].[stock_vente]       v
-	LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]  cl ON v.fk_client = cl.id
-	LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
-	LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
-	LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
-	LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
-    LEFT JOIN [TrizStockMekahli].[dbo].[type_client] tc on tc.id_type = v.fkTypeClient
-
-
-	-- <== new joins to get the truck
-	LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client]     sc ON v.fk_client = sc.fk_client
-	LEFT JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON sc.fk_secteur = csa.fk_secteur
-	LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]            c ON csa.fk_camion = c.id_camion
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]  cl ON v.fk_client = cl.id
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
+  LEFT JOIN [TrizStockMekahli].[dbo].[type_client] tc on tc.id_type = v.fkTypeClient
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_commande] sc on sc.id = v.fkCommande
 
 WHERE v.FKEtablissement = '${etablissementId}'
     AND
     v.fkStatutVente IN ('livrer','livrerNP', 'livrerP')
-	AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
-	AND (
+  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+  AND (
        -- filter by the trucks you care about
-       c.id_camion IN ('843101000028','843101000029','843101000031')
-	-- OR by specific clients
-	OR v.fk_client   IN ('CLG246','CLG405')
+      -- v.fkCommande LIKE '%ROS002%' --('843101000028','843101000029','843101000031')
+       --OR v.fkCommande LIKE '%ROS003%'
+       --OR v.fkCommande LIKE '%ROG003%'
+  -- OR by specific clients
+  sc.fk_camion IN ('843101000028','843101000029','843101000031')
+  OR v.fk_client   IN ('CLG246','CLG405')
   );
+  --ROG003 ROS003 ROS002
 `
         query3 = `
 SELECT
     distinct dv.id,
      v.FKEtablissement       AS fkEtablissement
-    ,c.id_camion
-    ,c.code_camion
+    --,c.id_camion
+    --,c.code_camion
     ,v.fk_client            AS fkClient
     ,cl.raison_social       AS clientName
     ,v.[date]
@@ -650,6 +650,7 @@ SELECT
     --,tc.id_type
     ,'Gros'                AS typePrix
     ,v.fkStatutVente as fkStatutLivraison
+    ,v.fkCommande
 FROM [TrizStockMekahli].[dbo].[stock_vente]         v
 LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]        cl  ON v.fk_client      = cl.id
 LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente]  dv  ON v.id             = dv.fk_vente
@@ -657,11 +658,8 @@ LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit]       p   ON dv.fk_produit   
 LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille]   sf  ON p.fk_Sousfamille = sf.id
 LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille]       f   ON sf.fk_famille    = f.id
 LEFT JOIN [TrizStockMekahli].[dbo].[type_client] tc on tc.id_type = v.fkTypeClient
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_commande] sc on sc.id = v.fkCommande
 
--- distribution joins to get the truck
-LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client]     sc  ON v.fk_client = sc.fk_client
-LEFT JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa ON sc.fk_secteur = csa.fk_secteur
-LEFT JOIN [TrizDistributionMekahli].[dbo].[camion]            c   ON csa.fk_camion = c.id_camion
 
 
 WHERE
@@ -671,7 +669,11 @@ WHERE
     AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
     AND (
         -- clients linked to the specific "Gros" trucks
-        c.id_camion NOT IN ('843101000028','843101000029','843101000031')
+        --c.id_camion NOT IN ('843101000028','843101000029','843101000031')
+        -- v.fkCommande not LIKE '%ROS002%'
+       --and v.fkCommande not LIKE '%ROS003%'
+       --and v.fkCommande not LIKE '%ROG003%'
+       sc.fk_camion NOT IN ('843101000028','843101000029','843101000031')
         AND v.fk_client NOT IN ('CLG246','CLG405')
     );
 
