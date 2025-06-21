@@ -15,6 +15,8 @@ class RtmController {
       user.permission.CmdRicamar = true;
       user.permission.StockMagasin = true;
       user.permission.SeniaPv = true;
+      user.permission.RicamarDetail = true;
+      user.permission.RicamarGros = true;
       if (!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -504,6 +506,98 @@ ORDER BY
         
                 `;
       } 
+      else if (typeOfData == "RicamarDetail"){
+        query = `
+        SELECT
+          distinct dv.id,
+  v.FKEtablissement       AS fkEtablissement
+    , c.id
+  , c.code_camion
+    , v.fk_client            AS fkClient
+    , cl.raison_social       AS clientName
+    , v.[date]
+    , v.totalTTC
+    , p.nom_produit
+    , dv.prix                AS prix_unitaire
+    , dv.quantite
+    , dv.prix * dv.quantite  AS CA
+    , v.[remise]
+    , v.[remiseProduit]
+    , dv.valeurRemise
+    , p.colissage_carton     AS clissage
+    , sf.nom                 AS nomSousFamille
+    , f.Nom_famille          AS nomFamille
+    ,tc.id_type
+    , 'Détaillant'         AS typePrix
+    ,v.fkStatutVente as fkStatutLivraison
+    ,v.fkCommande
+FROM [TrizStockMekahli].[dbo].[stock_vente]       v
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]  cl ON v.fk_client = cl.id
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] p ON dv.fk_produit = p.id
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf ON p.fk_Sousfamille = sf.id
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
+  LEFT JOIN [TrizStockMekahli].[dbo].[type_client] tc on tc.id_type = v.fkTypeClient
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_commande] sc on sc.id = v.fkCommande
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_stockCamion] c on c.id = sc.fk_camion
+
+WHERE v.FKEtablissement = '${etablissementId}'
+    AND
+    v.fkStatutVente IN ('livrer','livrerNP', 'livrerP')
+  AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+  AND (
+  sc.fk_camion IN ('843101000028','843101000029','843101000031')
+  OR v.fk_client   IN ('CLG246','CLG405')
+  );
+        `
+      }
+      else if (typeOfData == "RicamarGros"){
+        query = `
+        SELECT
+    distinct dv.id,
+     v.FKEtablissement       AS fkEtablissement
+    ,c.id
+    ,c.code_camion
+    ,v.fk_client            AS fkClient
+    ,cl.raison_social       AS clientName
+    ,v.[date]
+    ,v.totalTTC
+    ,p.nom_produit
+    ,dv.prix                AS prix_unitaire
+    ,dv.quantite
+    ,dv.prix * dv.quantite  AS CA
+    ,v.[remise]
+    ,v.[remiseProduit]
+    ,dv.valeurRemise
+    ,p.colissage_carton     AS clissage
+    ,sf.nom                 AS nomSousFamille
+    ,f.Nom_famille          AS nomFamille
+    --,tc.id_type
+    ,'Gros'                AS typePrix
+    ,v.fkStatutVente as fkStatutLivraison
+    ,v.fkCommande
+FROM [TrizStockMekahli].[dbo].[stock_vente]         v
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_client]        cl  ON v.fk_client      = cl.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_detail_vente]  dv  ON v.id             = dv.fk_vente
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit]       p   ON dv.fk_produit    = p.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille]   sf  ON p.fk_Sousfamille = sf.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille]       f   ON sf.fk_famille    = f.id
+LEFT JOIN [TrizStockMekahli].[dbo].[type_client] tc on tc.id_type = v.fkTypeClient
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_commande] sc on sc.id = v.fkCommande
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_stockCamion] c on c.id = sc.fk_camion
+
+WHERE
+    v.FKEtablissement = '${etablissementId}'
+    AND
+    v.fkStatutVente IN ('livrer','livrerNP', 'livrerP')
+    AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+    AND (
+       sc.fk_camion NOT IN ('843101000028','843101000029','843101000031')
+        AND v.fk_client NOT IN ('CLG246','CLG405')
+    );
+
+        `
+      }
       else if (typeOfData == "VentesRicamar"){
         query = `
                   SELECT 
@@ -583,8 +677,8 @@ ORDER BY
 SELECT
           distinct dv.id,
   v.FKEtablissement       AS fkEtablissement
-    --, c.id_camion
-  --, c.code_camion
+    , c.id
+  , c.code_camion
     , v.fk_client            AS fkClient
     , cl.raison_social       AS clientName
     , v.[date]
@@ -611,28 +705,23 @@ FROM [TrizStockMekahli].[dbo].[stock_vente]       v
   LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille] f ON sf.fk_famille = f.id
   LEFT JOIN [TrizStockMekahli].[dbo].[type_client] tc on tc.id_type = v.fkTypeClient
   LEFT JOIN [TrizStockMekahli].[dbo].[stock_commande] sc on sc.id = v.fkCommande
+  LEFT JOIN [TrizStockMekahli].[dbo].[stock_stockCamion] c on c.id = sc.fk_camion
 
 WHERE v.FKEtablissement = '${etablissementId}'
     AND
     v.fkStatutVente IN ('livrer','livrerNP', 'livrerP')
   AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
   AND (
-       -- filter by the trucks you care about
-      -- v.fkCommande LIKE '%ROS002%' --('843101000028','843101000029','843101000031')
-       --OR v.fkCommande LIKE '%ROS003%'
-       --OR v.fkCommande LIKE '%ROG003%'
-  -- OR by specific clients
   sc.fk_camion IN ('843101000028','843101000029','843101000031')
   OR v.fk_client   IN ('CLG246','CLG405')
   );
-  --ROG003 ROS003 ROS002
 `
         query3 = `
 SELECT
     distinct dv.id,
      v.FKEtablissement       AS fkEtablissement
-    --,c.id_camion
-    --,c.code_camion
+    ,c.id
+    ,c.code_camion
     ,v.fk_client            AS fkClient
     ,cl.raison_social       AS clientName
     ,v.[date]
@@ -659,8 +748,7 @@ LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille]   sf  ON p.fk_Sousfamille
 LEFT JOIN [TrizStockMekahli].[dbo].[stock_famille]       f   ON sf.fk_famille    = f.id
 LEFT JOIN [TrizStockMekahli].[dbo].[type_client] tc on tc.id_type = v.fkTypeClient
 LEFT JOIN [TrizStockMekahli].[dbo].[stock_commande] sc on sc.id = v.fkCommande
-
-
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_stockCamion] c on c.id = sc.fk_camion
 
 WHERE
     v.FKEtablissement = '${etablissementId}'
@@ -668,11 +756,6 @@ WHERE
     v.fkStatutVente IN ('livrer','livrerNP', 'livrerP')
     AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
     AND (
-        -- clients linked to the specific "Gros" trucks
-        --c.id_camion NOT IN ('843101000028','843101000029','843101000031')
-        -- v.fkCommande not LIKE '%ROS002%'
-       --and v.fkCommande not LIKE '%ROS003%'
-       --and v.fkCommande not LIKE '%ROG003%'
        sc.fk_camion NOT IN ('843101000028','843101000029','843101000031')
         AND v.fk_client NOT IN ('CLG246','CLG405')
     );
