@@ -641,7 +641,7 @@ WHERE
         sc.fk_camion IN ('843101000028','843101000029','843101000031')
         OR v.fk_client   IN ('CLG246','CLG405')
     )
-    and dv.prix > 0
+    --and dv.prix > 0
 GROUP BY
     CAST(v.[date] AS date),
     p.nom_produit
@@ -652,32 +652,26 @@ ORDER BY
 `
         query3 = `
 SELECT
-    CAST(v.[date] AS date)      AS jour,
-    p.nom_produit               AS nom_produit,
-    SUM(dv.quantite)            AS quantite,
-    SUM(dv.quantite * dv.prix)  AS CA_journalier,
-    'GROS'         AS typePrix
+  CAST(v.[date] AS date)      AS jour,
+  p.nom_produit               AS nom_produit,
+  SUM(dv.quantite)            AS quantite,
+  SUM(dv.quantite * dv.prix)  AS CA_journalier
+  ,'Gros'         AS typePrix
 FROM [TrizStockMekahli].[dbo].[stock_vente]       v
-JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id       = dv.fk_vente
+JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
 JOIN [TrizStockMekahli].[dbo].[stock_produit]     p  ON dv.fk_produit = p.id
-LEFT JOIN [TrizStockMekahli].[dbo].[stock_commande]    sc ON sc.id    = v.fkCommande
--- you can re‑add the remaining LEFT JOIN type_client if you need it, but it isn't used in SELECT
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_stockCamion] c ON c.id = v.fk_camion
 WHERE
     v.FKEtablissement = '${etablissementId}'
     AND v.fkStatutVente IN ('livrer','livrerNP','livrerP')
     AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
-    AND (
-       sc.fk_camion NOT IN ('843101000028','843101000029','843101000031')
-    AND v.fk_client   NOT IN ('CLG246','CLG405')
-    )
-     and dv.prix > 0
 GROUP BY
     CAST(v.[date] AS date),
     p.nom_produit
+
 ORDER BY
     jour,
     nom_produit
-
 
   `
       }
