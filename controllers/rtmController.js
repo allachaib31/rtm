@@ -613,7 +613,7 @@ WHERE
     l.fkEtablissement    = '${etablissementId}'
     AND l.fkStatutLivraison IN ('livrer')
     AND l.date BETWEEN '${startDate}' AND '${endDate}'
-    and dl.prix_unitaire > 0
+    --and dl.prix_unitaire > 0
 GROUP BY
     CAST(l.date AS date),
     p.nom_produit
