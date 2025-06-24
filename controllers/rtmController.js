@@ -17,6 +17,7 @@ class RtmController {
       user.permission.SeniaPv = true;
       user.permission.RicamarDetail = true;
       user.permission.RicamarGros = true;
+      user.permission.VentesRicamarGratuiter = true;
       if (!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -598,6 +599,54 @@ WHERE
 
         `
       }
+      else if (typeOfData == "VentesRicamarGratuiter"){
+        query = `
+          SELECT
+    CAST(l.date AS date)            AS jour,
+    p.nom_produit                   AS nom_produit,
+    SUM(dl.quantite)                AS quantite,
+    SUM(dl.quantite * dl.prix_unitaire) AS CA_journalier,
+    'Détaillant'         AS typePrix
+FROM [TrizDistributionMekahli].[dbo].[Livraison]                         l
+JOIN [TrizDistributionMekahli].[dbo].[DetailLivraison]                  dl ON l.id             = dl.fk_livraison
+JOIN [TrizDistributionMekahli].[dbo].[produit]                          p  ON dl.fk_produit    = p.id_produit
+WHERE
+    l.fkEtablissement    = '${etablissementId}'
+    AND l.fkStatutLivraison IN ('livrer')
+    AND l.date BETWEEN '${startDate}' AND '${endDate}'
+    and dl.prix_unitaire = 0
+GROUP BY
+    CAST(l.date AS date),
+    p.nom_produit
+ORDER BY
+    jour,
+    nom_produit
+        `
+        query2 = `
+          SELECT
+  CAST(v.[date] AS date)      AS jour,
+  p.nom_produit               AS nom_produit,
+  SUM(dv.quantite)            AS quantite,
+  SUM(dv.quantite * dv.prix)  AS CA_journalier
+  ,'Détaillant'         AS typePrix
+FROM [TrizStockMekahli].[dbo].[stock_vente]       v
+JOIN [TrizStockMekahli].[dbo].[stock_detail_vente] dv ON v.id = dv.fk_vente
+JOIN [TrizStockMekahli].[dbo].[stock_produit]     p  ON dv.fk_produit = p.id
+LEFT JOIN [TrizStockMekahli].[dbo].[stock_stockCamion] c ON c.id = v.fk_camion
+WHERE
+    v.FKEtablissement = '${etablissementId}'
+    AND v.fkStatutVente IN ('livrer','livrerNP','livrerP')
+    AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+    AND dv.prix = 0
+GROUP BY
+    CAST(v.[date] AS date),
+    p.nom_produit
+
+ORDER BY
+    jour,
+    nom_produit
+        `
+      }
       else if (typeOfData == "VentesRicamar") {
         query = `
 SELECT
@@ -613,7 +662,7 @@ WHERE
     l.fkEtablissement    = '${etablissementId}'
     AND l.fkStatutLivraison IN ('livrer')
     AND l.date BETWEEN '${startDate}' AND '${endDate}'
-    --and dl.prix_unitaire > 0
+    and dl.prix_unitaire > 0
 GROUP BY
     CAST(l.date AS date),
     p.nom_produit
@@ -641,7 +690,7 @@ WHERE
         sc.fk_camion IN ('843101000028','843101000029','843101000031')
         OR v.fk_client   IN ('CLG246','CLG405')
     )
-    --and dv.prix > 0
+    and dv.prix > 0
 GROUP BY
     CAST(v.[date] AS date),
     p.nom_produit
@@ -665,6 +714,7 @@ WHERE
     v.FKEtablissement = '${etablissementId}'
     AND v.fkStatutVente IN ('livrer','livrerNP','livrerP')
     AND v.[date] BETWEEN '${startDate}' AND '${endDate}'
+    AND dv.prix > 0
 GROUP BY
     CAST(v.[date] AS date),
     p.nom_produit
