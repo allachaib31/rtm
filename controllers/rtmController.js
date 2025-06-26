@@ -1774,6 +1774,7 @@ SELECT
     sm.quantite      AS stockmagasin_quantite,
     pr.prix,
     pr.prix * sc.quantite as valuer,
+    sp.clissage,
     CASE 
       -- treat NULL _or_ zero in camion as “missing in camion”
       WHEN (sc.fk_produit IS NULL OR sc.quantite = 0)
