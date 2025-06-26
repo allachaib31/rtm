@@ -1766,12 +1766,14 @@ WHERE
         `
       } else if (typeOfData == "stockCamion") {
         query = `
-          SELECT
+SELECT
     sm.fk_produit,
     sp.nom_produit,
     ca.code_camion,
     sc.quantite      AS camion_quantite,
     sm.quantite      AS stockmagasin_quantite,
+    pr.prix,
+    pr.prix * sc.quantite as valuer,
     CASE 
       -- treat NULL _or_ zero in camion as “missing in camion”
       WHEN (sc.fk_produit IS NULL OR sc.quantite = 0)
@@ -1789,10 +1791,20 @@ LEFT JOIN
     TrizDistributionMekahli.dbo.camion ca 
   ON sc.fk_camion     = ca.id_camion
 LEFT JOIN 
-    TrizStockMekahli.dbo.stock_produit sp
-  ON sp.id            = sm.fk_produit
+    TrizDistributionMekahli.dbo.produit sp
+  ON sp.id_produit            = sm.fk_produit
+
+LEFT JOIN 
+    TrizDistributionMekahli.dbo.Prix pr
+  ON pr.fk_produit = sm.fk_produit
+  
+LEFT JOIN 
+    TrizDistributionMekahli.dbo.type_client tc
+  ON tc.id_type = pr.fk_type_client
+
 WHERE 
-    sm.fk_etablissement = '${etablissementId}';
+    sm.fk_etablissement = '${etablissementId}' and tc.type_client = 'Détaillant';
+
 
         `
       }
