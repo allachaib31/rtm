@@ -18,6 +18,7 @@ class RtmController {
       user.permission.RicamarDetail = true;
       user.permission.RicamarGros = true;
       user.permission.VentesRicamarGratuiter = true;
+      user.permission.stockCamion = true;
       if (!user.permission[typeOfData]) {
         return res.status(httpStatus.FORBIDDEN).send({ msg: "You dont have permission" });
       }
@@ -1761,6 +1762,37 @@ WHERE
     AND x.code_camion IS NOT NULL
 ;
 
+
+        `
+      } else if (typeOfData == "stockCamion") {
+        query = `
+          SELECT
+    sm.fk_produit,
+    sp.nom_produit,
+    ca.code_camion,
+    sc.quantite      AS camion_quantite,
+    sm.quantite      AS stockmagasin_quantite,
+    CASE 
+      -- treat NULL _or_ zero in camion as “missing in camion”
+      WHEN (sc.fk_produit IS NULL OR sc.quantite = 0)
+           AND sm.quantite    > 0
+        THEN 'True'
+      ELSE 'False'
+    END AS MissingInCamion
+FROM 
+    TrizStockMekahli.dbo.stock_stockMagasin sm
+LEFT JOIN 
+    TrizDistributionMekahli.dbo.stock_camion sc
+  ON sm.fk_produit    = sc.fk_produit 
+ AND sc.fkEtablissement = sm.fk_etablissement
+LEFT JOIN 
+    TrizDistributionMekahli.dbo.camion ca 
+  ON sc.fk_camion     = ca.id_camion
+LEFT JOIN 
+    TrizStockMekahli.dbo.stock_produit sp
+  ON sp.id            = sm.fk_produit
+WHERE 
+    sm.fk_etablissement = '${etablissementId}';
 
         `
       }
