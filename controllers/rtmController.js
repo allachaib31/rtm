@@ -1689,7 +1689,7 @@ ORDER BY
         FROM [TrizStockMekahli].[dbo].[stock_stockMagasin] sm 
         LEFT JOIN [TrizStockMekahli].[dbo].[stock_produit] sp on sp.id = sm.fk_produit 
         LEFT JOIN [TrizStockMekahli].[dbo].[stock_sousfamille] sf on sp.fk_Sousfamille = sf.id
-        where sm.fk_etablissement = '31010' and sf.nom IN ('RICAMAR', 'CANASTEL', 'POSEIDON', 'PORTOMAR');
+        where sm.fk_etablissement = '${etablissementId}'-- and sf.nom IN ('RICAMAR', 'CANASTEL', 'POSEIDON', 'PORTOMAR');
         `
       } else if (typeOfData == "SeniaPv") {
         query = `
