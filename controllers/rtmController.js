@@ -1684,6 +1684,7 @@ ORDER BY
         SELECT sm.[id]
         ,sm.[fk_produit]
         ,sm.[quantite]
+        ,sp.colissage_carton
         ,sm.[fk_etablissement]
         ,sp.[nom_produit] 
         FROM [TrizStockMekahli].[dbo].[stock_stockMagasin] sm 
