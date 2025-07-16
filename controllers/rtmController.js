@@ -927,7 +927,7 @@ SELECT
     sce.fkClient,
     sce.fkEtablissement,
     sce.sold,
-    c.Nom,
+    c.Nom AS [Client Name],
     scct.code_camion AS [Camion Name]
 FROM TrizDistributionMekahli.dbo.client_Etablissement sce
 LEFT JOIN TrizDistributionMekahli.dbo.client c 
