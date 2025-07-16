@@ -901,7 +901,30 @@ WHERE sce.fkEtablissement = '${etablissementId}';
 
 
   `
-        } else {
+        } else if (etablissementId == "Gold") {
+          query = `
+          SELECT cc.[id]
+      ,cc.[fkClient]
+      ,cl.Nom       AS [Client Name]
+      ,cc.[fkEtablissement]
+      ,cc.[sold]
+  FROM [TrizStockMekahli].[dbo].[stock_client_Etablissement] cc
+  LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
+    ON cl.id_client = cc.fkClient
+WHERE 
+    cc.fkClient IN (
+        '31-00507','31-00509','31-01294','31-01512','31-01514','31-01518',
+        '31-01648','31-01891','31-01981','31-02098','31-02341','31-02577',
+        '31-02702','31-03152','31-03347','31-03357','31-04530','31-04661',
+        '31-04662','31-04663','31-04664','31-04667',
+        '80310092300218','80310092300245',
+        '80pre0124000002','80pre0124000003',
+        '80pre0325000021','80pre0325000024',
+        '80SM1122200004'
+    )
+    AND cc.fkEtablissement = '31002';
+`
+        }else {
           query = `
 WITH SecteurCamionCTE AS (
     SELECT 
@@ -938,7 +961,7 @@ LEFT JOIN SecteurCamionCTE scct
     ON scct.fk_client = sc.id_client AND scct.rn = 1
 WHERE sce.fkEtablissement = '${etablissementId}';
                         `
-          if (etablissementId == '31002') {
+         /* if (etablissementId == '31002') {
             query2 = `
 SELECT cc.[id]
       ,cc.[fkClient]
@@ -962,7 +985,7 @@ WHERE
     AND cc.fkEtablissement = '31002';
 
             `
-          }
+          }*/
         }
       } else if (typeOfData == "SoldDetails") {
         if (etablissementId == "31010") {
