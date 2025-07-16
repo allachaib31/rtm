@@ -903,21 +903,40 @@ WHERE sce.fkEtablissement = '${etablissementId}';
   `
         } else {
           query = `
-SELECT cc.[id]
-      ,cc.[fk_camion]
-      ,ca.code_camion as [Camion Name]
-      ,cc.[fk_client] as fkClient
-      ,cl.Nom as [Client Name]
-      ,cc.[solde]
-      ,cc.[fkEtablissement]
-      ,cc.[isSynchroniser]
-      ,cc.[isLitigeCredit]
-  FROM [TrizDistributionMekahli].[dbo].[CreditCamionClient] cc
-  LEFT JOIN [TrizDistributionMekahli].[dbo].[client] cl
-    ON cl.id_client = cc.fk_client
-  LEFT JOIN [TrizDistributionMekahli].[dbo].[camion] ca
-    ON ca.id_camion = cc.fk_camion
-   WHERE cc.fkEtablissement = '${etablissementId}' OR (cc.fkEtablissement is null and cl.fkEtablissement = '${etablissementId}' OR ca.fkEtablissement = '${etablissementId}')
+WITH SecteurCamionCTE AS (
+    SELECT 
+        sec.fk_client,
+        sec.fk_secteur,
+        cas.fk_camion,
+        cam.code_camion,
+        ROW_NUMBER() OVER (
+            PARTITION BY sec.fk_client 
+            ORDER BY 
+                CASE WHEN cam.id_camion IS NOT NULL THEN 0 ELSE 1 END,
+                sec.id DESC
+        ) AS rn
+    FROM TrizDistributionMekahli.dbo.secteur_client sec
+    LEFT JOIN TrizDistributionMekahli.dbo.CamionSecteurAffecter cas 
+        ON cas.fk_secteur = sec.fk_secteur
+    LEFT JOIN TrizDistributionMekahli.dbo.camion cam 
+        ON cam.id_camion = cas.fk_camion
+    WHERE cam.fkEtablissement = '${etablissementId}'
+)
+
+SELECT  
+    sce.fkClient,
+    sce.fkEtablissement,
+    sce.sold,
+    c.Nom,
+    scct.code_camion AS [Camion Name]
+FROM TrizDistributionMekahli.dbo.client_Etablissement sce
+LEFT JOIN TrizDistributionMekahli.dbo.client c 
+    ON c.id_client = sce.fkClient
+LEFT JOIN TrizDistributionMekahli.dbo.client sc 
+    ON sc.id_client = c.id_client
+LEFT JOIN SecteurCamionCTE scct 
+    ON scct.fk_client = sc.id_client AND scct.rn = 1
+WHERE sce.fkEtablissement = '${etablissementId}';
                         `
           if (etablissementId == '31002') {
             query2 = `
