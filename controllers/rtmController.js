@@ -439,7 +439,71 @@ ORDER BY
       }
       else if (typeOfData == "Commande") {
         query = `
-                SELECT 
+        WITH AugustDates AS (
+    -- Produces proper date typed values
+    SELECT '2025-08-01' AS date_value, 'Vendredi' AS day_name
+    UNION ALL SELECT '2025-08-08', 'Vendredi'
+    UNION ALL SELECT '2025-08-15', 'Vendredi'
+    UNION ALL SELECT '2025-08-22', 'Vendredi'
+    UNION ALL SELECT '2025-08-29', 'Vendredi'
+
+    UNION ALL SELECT '2025-08-02', 'Samedi'
+    UNION ALL SELECT '2025-08-09', 'Samedi'
+    UNION ALL SELECT '2025-08-16', 'Samedi'
+    UNION ALL SELECT '2025-08-23', 'Samedi'
+    UNION ALL SELECT '2025-08-30', 'Samedi'
+
+    UNION ALL SELECT '2025-08-03', 'Dimanche'
+    UNION ALL SELECT '2025-08-10', 'Dimanche'
+    UNION ALL SELECT '2025-08-17', 'Dimanche'
+    UNION ALL SELECT '2025-08-24', 'Dimanche'
+    UNION ALL SELECT '2025-08-31', 'Dimanche'
+
+    UNION ALL SELECT '2025-08-04', 'Lundi'
+    UNION ALL SELECT '2025-08-11', 'Lundi'
+    UNION ALL SELECT '2025-08-18', 'Lundi'
+    UNION ALL SELECT '2025-08-25', 'Lundi'
+
+    UNION ALL SELECT '2025-08-05', 'Mardi'
+    UNION ALL SELECT '2025-08-12', 'Mardi'
+    UNION ALL SELECT '2025-08-19', 'Mardi'
+    UNION ALL SELECT '2025-08-26', 'Mardi'
+
+    UNION ALL SELECT '2025-08-06', 'Mercredi'
+    UNION ALL SELECT '2025-08-13', 'Mercredi'
+    UNION ALL SELECT '2025-08-20', 'Mercredi'
+    UNION ALL SELECT '2025-08-27', 'Mercredi'
+
+    UNION ALL SELECT '2025-08-07', 'Jeudi'
+    UNION ALL SELECT '2025-08-14', 'Jeudi'
+    UNION ALL SELECT '2025-08-21', 'Jeudi'
+    UNION ALL SELECT '2025-08-28', 'Jeudi'
+),
+
+ClientsPerCamionDate AS (
+    -- Count distinct clients per camion & date (based on secteur/day mapping)
+    SELECT 
+        ad.date_value,
+        c.id_camion,
+        COUNT(DISTINCT sc.fk_client) AS numberOfClient
+    FROM 
+        AugustDates ad
+        CROSS JOIN [TrizDistributionMekahli].[dbo].[CamionSecteurAffecter] csa
+        INNER JOIN [TrizDistributionMekahli].[dbo].[camion] c 
+            ON csa.fk_camion = c.id_camion
+        INNER JOIN [TrizDistributionMekahli].[dbo].[secteur] s 
+            ON csa.fk_secteur = s.id_secteur
+        LEFT JOIN [TrizDistributionMekahli].[dbo].[secteur_client] sc 
+            ON csa.fk_secteur = sc.fk_secteur
+    WHERE 
+        csa.fkEtablissement = '${etablissementId}'
+        AND s.Nom_secteur LIKE '%' + ad.day_name + '%'
+    GROUP BY 
+        ad.date_value,
+        c.id_camion
+)
+
+SELECT 
             c.id,
             c.fkEtablissement,
             e.nomEtablissement,
@@ -479,7 +543,8 @@ ORDER BY
             sf.nom AS nomSousFamille,
             f.Nom_famille,
             c.Position_gps_latitude,
-            c.Position_gps_longitude
+            c.Position_gps_longitude,
+            ISNULL(cp.numberOfClient, 0) AS numberOfClient
         FROM 
             "TrizDistributionMekahli"."dbo".Commande c
         JOIN 
@@ -500,12 +565,14 @@ ORDER BY
             "TrizDistributionMekahli"."dbo".Sous_famille sf ON p.fk_Sousfamille = sf.id_sousfamille
         LEFT JOIN 
             "TrizDistributionMekahli"."dbo".famille f ON sf.fk_famille = f.id_famille
+        LEFT JOIN ClientsPerCamionDate cp
+            ON cp.id_camion = c.fkCamion
+                AND cp.date_value = CAST(c.date AS date)
         WHERE 
             c.fkEtablissement = '${etablissementId}' 
             AND c.date BETWEEN '${startDate}' AND '${endDate}'
         ORDER BY 
             c.id, dc.fk_produit;
-        
                 `;
       }
       else if (typeOfData == "RicamarDetail") {
